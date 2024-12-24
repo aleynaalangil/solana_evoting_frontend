@@ -1,0 +1,79 @@
+/* App.css */
+.App {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  font-family: 'Arial', sans-serif;
+}
+
+.App img.logo {
+  width: 150px;
+  margin-bottom: 20px;
+  transition: transform 0.2s;
+}
+
+.App img.logo:hover {
+  transform: scale(1.05);
+}
+
+input[type="text"], button, .WalletMultiButton {
+  width: 50%;
+  padding: 15px 20px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  transition: all 0.3s ease-in-out;
+}
+
+input[type="text"]:focus, button:focus, .WalletMultiButton:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,.25);
+}
+
+input[type="text"] {
+  background-color: #ffffff;
+  font-size: 16px;
+}
+
+button, .WalletMultiButton {
+  background-color: #4CAF50;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+}
+
+button:hover, .WalletMultiButton:hover {
+  background-color: #45a049;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+button:disabled,
+button[disabled]{
+  background-color: #cccccc;
+  color: #666666;
+}
+
+.title-header {
+  width: 100%;
+  padding: 20px;
+  background-color: #4e2cae;
+  color: white;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 30px; /* Added bottom margin for spacing */
+}
