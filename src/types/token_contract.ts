@@ -347,7 +347,26 @@ export type TokenContract = {
         {
           "name": "company",
           "writable": true,
-          "signer": true
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  109,
+                  112,
+                  97,
+                  110,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "payer"
+              }
+            ]
+          }
         },
         {
           "name": "payer",
@@ -369,12 +388,7 @@ export type TokenContract = {
         },
         {
           "name": "symbol",
-          "type": {
-            "array": [
-              "u8",
-              5
-            ]
-          }
+          "type": "string"
         },
         {
           "name": "totalSupply",
@@ -642,12 +656,7 @@ export type TokenContract = {
           },
           {
             "name": "symbol",
-            "type": {
-              "array": [
-                "u8",
-                5
-              ]
-            }
+            "type": "string"
           },
           {
             "name": "totalSupply",

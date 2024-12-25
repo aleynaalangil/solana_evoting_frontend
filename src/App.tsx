@@ -1,4 +1,3 @@
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import { ConnectionProvider, WalletProvider, useAnchorWallet, useWallet } from '@solana/wallet-adapter-react';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
@@ -26,10 +25,8 @@ export default App;
 
 const Context: FC<{ children: ReactNode }> = ({ children }) => {
     const customClusterEndpoint = "https://api.devnet.solana.com";
-    // const customClusterEndpoint = "https://127.0.0.1:8899";
     const endpoint = customClusterEndpoint;
     const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
-    // const wallet = provider.wallet as anchor.Wallet;
 
 
     return (
@@ -59,163 +56,116 @@ const Content: FC = () => {
 
     const onMintNFT = useCallback(async () => {
         if (!anchorWallet) return;
-        const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
-        const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
-        const program = new Program(idl as TokenContract, provider);
-        const tx = new anchor.web3.Transaction();
-        const ATA_PROGRAM_ID = new anchor.web3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
-
-
-
         try {
-            // const [tokenMint] = await PublicKey.findProgramAddressSync(
-            //     [utils.bytes.utf8.encode("token-2022-token"), anchorWallet.publicKey.toBuffer(), new TextEncoder().encode(nftName)],
-            //     program.programId
-            // );
-            const [tokenMint] = anchor.web3.PublicKey.findProgramAddressSync(
-                [Buffer.from('token-2022-token'), anchorWallet.publicKey.toBytes(), Buffer.from(nftName)],
-                program.programId,
-            );
-            const [treasury] = await anchor.web3.PublicKey.findProgramAddressSync(
-                [anchorWallet.publicKey.toBytes(), TOKEN_2022_PROGRAM_ID.toBytes(), tokenMint.toBytes()],
-                ATA_PROGRAM_ID,
-            );
-            const [companyAccount] = await PublicKey.findProgramAddressSync(
-                [Buffer.from("company"), anchorWallet.publicKey.toBytes()],
-                program.programId
-            );
-            console.log("company account", companyAccount);
-            const [payerATA] = anchor.web3.PublicKey.findProgramAddressSync(
-                [anchorWallet.publicKey.toBytes(), TOKEN_2022_PROGRAM_ID.toBytes(), tokenMint.toBytes()],
-                ATA_PROGRAM_ID,
-            );
-            console.log("payer ata ", payerATA);
-            console.log("token mint", tokenMint.toBase58());
-            console.log("company name", nftName);
+          const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
+          const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
+          const program = new Program(idl as TokenContract, provider);
+          const ATA_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 
-            const symbolArray = Array.from(nftDescription).map(char => char.charCodeAt(0)).slice(0, 5);
-            console.log(symbolArray.toString());
+          console.log("anchorWallet.publicKey", anchorWallet.publicKey.toBase58());
+      
+        // seeds = [b"company", payer.key().as_ref()],
+          const [companyAccount] = PublicKey.findProgramAddressSync(
+            [Buffer.from('company'),anchorWallet.publicKey.toBytes()],
+            program.programId
+          );
 
-            const ix = await program.methods
-                .createToken(nftName)
-                .accounts({
-                    signer: anchorWallet.publicKey,
-                    tokenProgram: TOKEN_2022_PROGRAM_ID,
-                })
-                .instruction();
-            tx.add(ix)
-            // .transaction()
+        // seeds = [b"token-2022-token", signer.key().as_ref(), token_name.as_bytes()],
+          const [mint] = PublicKey.findProgramAddressSync(
+            [Buffer.from('token-2022-token'), anchorWallet.publicKey.toBytes(), Buffer.from(nftName)],
+            program.programId
+          );
 
-            // anchorWallet.signTransaction(ix);
+          const [payerATA] = anchor.web3.PublicKey.findProgramAddressSync(
+            [anchorWallet.publicKey.toBytes(), TOKEN_2022_PROGRAM_ID.toBytes(), mint.toBytes()],
+            ATA_PROGRAM_ID,
+        );
 
-            const ix1 = await program.methods
-                .createAssociatedTokenAccount()
-                .accounts({
-                    // @ts-ignore
-                    tokenAccount: payerATA,
-                    mint: tokenMint,
-                    signer: anchorWallet.publicKey,
-                    tokenProgram: TOKEN_2022_PROGRAM_ID,
-                })
-                .instruction();
-            tx.add(ix1);
-            // .transaction()
+        const [treasury] = await anchor.web3.PublicKey.findProgramAddressSync( // TODO:this can be wrong.. double check
+            [anchorWallet.publicKey.toBytes(), TOKEN_2022_PROGRAM_ID.toBytes(), mint.toBytes()],
+            ATA_PROGRAM_ID,
+        );
+      
+          console.log('Company PDA:', companyAccount.toBase58());
+      
+          const tx = new web3.Transaction();
+      
+          const createTokenIx = await program.methods
+            .createToken(nftName)
+            .accounts({ 
+                signer: anchorWallet.publicKey,
+                tokenProgram: TOKEN_2022_PROGRAM_ID
+            })
+            .instruction();
 
-            // anchorWallet.signTransaction(ix1);
+            const createATAIx = await program.methods
+            .createAssociatedTokenAccount()
+            .accounts({ 
+                // @ts-ignore
+                tokenAccount: payerATA,
+                mint: mint,
+                signer: anchorWallet.publicKey,
+                tokenProgram: TOKEN_2022_PROGRAM_ID,
+            })
+            .instruction();
 
-            const ix2 = await program.methods
-                .mintToken(new anchor.BN(totalSupply))
-                .accounts({
-                    mint: tokenMint,
-                    signer: anchorWallet.publicKey,
-                    receiver: treasury,
-                    tokenProgram: TOKEN_2022_PROGRAM_ID,
-                })
-                .instruction();
+            const mintTokenIx = await program.methods
+            .mintToken(new anchor.BN(totalSupply))
+            .accounts({
+                mint: mint,
+                signer: anchorWallet.publicKey,
+                receiver: treasury, //or payerATA???
+                tokenProgram: TOKEN_2022_PROGRAM_ID,
+            })
+            .instruction();
 
-            tx.add(ix2);
-            // .transaction()
+            const createCompanyIx = await program.methods.initializeCompany(
+                nftName, 
+                nftDescription, 
+                new BN(totalSupply),
+                mint, 
+                treasury)
+            .accounts({
+                // @ts-ignore
+                company: companyAccount,
+                payer: anchorWallet.publicKey,
+                tokenProgram: TOKEN_2022_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+            })
+            .instruction();
+      
+          tx.add(createTokenIx);
+          tx.add(createATAIx);
+          tx.add(mintTokenIx);
+          tx.add(createCompanyIx);
+      
+          const { blockhash } = await connection.getLatestBlockhash();
+          tx.recentBlockhash = blockhash;
+          tx.feePayer = anchorWallet.publicKey;
 
-            // anchorWallet.signTransaction(ix2);
+          console.log(JSON.stringify(tx));
 
-            const ix0 = await program.methods.initializeCompany(nftName, symbolArray, new BN(totalSupply), tokenMint, treasury)
-                .accounts({
-                    company: companyAccount,
-                    payer: anchorWallet.publicKey,
-                    tokenProgram: TOKEN_2022_PROGRAM_ID,
-                })
-                .instruction();
-            // console.log("company: ", ix0.data.BYTES_PER_ELEMENT)
-            tx.add(ix0);
-            // .transaction()
+          
+        // fetching the latest company account
+        //   const accounts = await program.account.company.all();
+        //   const lenght = accounts.length;
+        //   console.log(accounts[lenght - 1].account.authority.toBase58());
+        //   console.log(accounts[lenght - 1].account.name);
+        //   console.log(accounts[lenght - 1].account.symbol);
+        //   console.log(accounts[lenght - 1].account.totalSupply.toString());
+        //   console.log(accounts[lenght - 1].account.tokenMint.toBase58());
+        //   console.log(accounts[lenght - 1].account.treasury.toBase58());
+        //   console.log(accounts[lenght - 1].account.shareholderCount.toString());
 
-            // anchorWallet.signTransaction(ix0);
-            
-
-            console.log('Transaction created');
-
-            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-            tx.recentBlockhash = blockhash;
-            tx.lastValidBlockHeight = lastValidBlockHeight;
-            tx.feePayer = anchorWallet.publicKey;
-            console.log('Transaction prepared with blockhash:', blockhash);
-
-            let transactionSignature: string;
-
-            try {
-                const serializedTransaction = tx.serialize({
-                    requireAllSignatures: false,
-                });
-                const base64 = serializedTransaction.toString("base64");
-                console.log("Serialized Transaction (base64):", base64);
-
-
-                const sig = await anchorWallet?.signTransaction(tx);
-                // const sig = await anchorWallet.signAllTransactions(
-                //     [
-                //         ix,
-                //         ix0,
-                //         ix1, 
-                //         ix2
-                //     ]
-                // )
-                const ac1 = await program.account.company.all();
-                console.log("company", ac1) 
-                // Simulate the transaction
-                // const simulationResult = await connection.simulateTransaction(tx);
-                // console.log("Simulation result:", simulationResult.value.returnData?.dat);
-
-
-                console.log('Transaction confirmed with signature:', sig);
-                try {
-                    const accounts = await program.account.company.fetchMultiple(
-                        [companyAccount, tokenMint, treasury]
-                    );
-                    console.log("Accounts fetched: ", accounts);
-                } catch (error) {
-                    console.error("Error fetching accounts: ", error);
-                }
-
-
-
-                // alert(`Company Created! Mint: ${tokenMint.toBase58()}, Transaction signature: ${transactionSignature?.signature?.toString()}`);
-
-                postMessage(
-                    `LET'S GOOO:"https://solana.fm/tx/${sig}?cluster=devnet`
-                );
-
-                
-
-            } catch (error) {
-                console.error("Transaction failed", error);
-            }
-
+          const signedTx = await anchorWallet?.signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signedTx.serialize());
+      
+          console.log('Transaction Signature:', sig);
         } catch (error) {
-            console.error("Error creating company:", error);
-            alert("Error creating company: " + (error as Error).message);
+          console.error('Error:', error);
         }
-    }, [anchorWallet, nftName, nftDescription, totalSupply]);
-
+      }, [anchorWallet, nftName]);
+    
     return (
         <div className="App">
             <header className="title-header">
