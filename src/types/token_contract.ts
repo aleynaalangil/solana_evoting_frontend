@@ -350,14 +350,6 @@ export type TokenContract = {
           "signer": true
         },
         {
-          "name": "tokenMint",
-          "writable": true
-        },
-        {
-          "name": "voteAccount",
-          "writable": true
-        },
-        {
           "name": "payer",
           "writable": true,
           "signer": true
@@ -368,10 +360,6 @@ export type TokenContract = {
         },
         {
           "name": "tokenProgram"
-        },
-        {
-          "name": "tokenContract",
-          "writable": true
         }
       ],
       "args": [
@@ -394,6 +382,10 @@ export type TokenContract = {
         },
         {
           "name": "tokenMint",
+          "type": "pubkey"
+        },
+        {
+          "name": "treasury",
           "type": "pubkey"
         }
       ]
@@ -670,7 +662,7 @@ export type TokenContract = {
             "type": "u32"
           },
           {
-            "name": "voteAccount",
+            "name": "treasury",
             "type": "pubkey"
           }
         ]

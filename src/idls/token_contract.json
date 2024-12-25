@@ -344,14 +344,6 @@
           "signer": true
         },
         {
-          "name": "token_mint",
-          "writable": true
-        },
-        {
-          "name": "vote_account",
-          "writable": true
-        },
-        {
           "name": "payer",
           "writable": true,
           "signer": true
@@ -362,10 +354,6 @@
         },
         {
           "name": "token_program"
-        },
-        {
-          "name": "token_contract",
-          "writable": true
         }
       ],
       "args": [
@@ -388,6 +376,10 @@
         },
         {
           "name": "token_mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "treasury",
           "type": "pubkey"
         }
       ]
@@ -664,7 +656,7 @@
             "type": "u32"
           },
           {
-            "name": "vote_account",
+            "name": "treasury",
             "type": "pubkey"
           }
         ]
