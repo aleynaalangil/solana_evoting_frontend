@@ -51,6 +51,10 @@
         {
           "name": "_is_whitelisted",
           "type": "bool"
+        },
+        {
+          "name": "company",
+          "type": "pubkey"
         }
       ]
     },
@@ -601,7 +605,7 @@
       "args": [
         {
           "name": "new_voting_power",
-          "type": "u64"
+          "type": "u128"
         }
       ]
     }
@@ -682,17 +686,19 @@
           },
           {
             "name": "voting_power",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "delegated_to",
-            "type": {
-              "option": "pubkey"
-            }
+            "type": "pubkey"
           },
           {
             "name": "is_whitelisted",
             "type": "bool"
+          },
+          {
+            "name": "company",
+            "type": "pubkey"
           }
         ]
       }

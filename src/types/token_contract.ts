@@ -57,6 +57,10 @@ export type TokenContract = {
         {
           "name": "isWhitelisted",
           "type": "bool"
+        },
+        {
+          "name": "company",
+          "type": "pubkey"
         }
       ]
     },
@@ -607,7 +611,7 @@ export type TokenContract = {
       "args": [
         {
           "name": "newVotingPower",
-          "type": "u64"
+          "type": "u128"
         }
       ]
     }
@@ -688,17 +692,19 @@ export type TokenContract = {
           },
           {
             "name": "votingPower",
-            "type": "u64"
+            "type": "u128"
           },
           {
             "name": "delegatedTo",
-            "type": {
-              "option": "pubkey"
-            }
+            "type": "pubkey"
           },
           {
             "name": "isWhitelisted",
             "type": "bool"
+          },
+          {
+            "name": "company",
+            "type": "pubkey"
           }
         ]
       }
