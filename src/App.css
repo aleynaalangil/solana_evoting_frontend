@@ -1,79 +1,210 @@
-/* App.css */
+/* General App Styles */
 .App {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   text-align: center;
   min-height: 100vh;
-  background-color: #f0f2f5;
-  font-family: 'Arial', sans-serif;
+  /* background-image: linear-gradient(to bottom right, #c084fc, #d8d1e9); */
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x: ;
+  --tw-pan-y: ;
+  --tw-pinch-zoom: ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position: ;
+  --tw-gradient-via-position: ;
+  --tw-gradient-to-position: ;
+  --tw-ordinal: ;
+  --tw-slashed-zero: ;
+  --tw-numeric-figure: ;
+  --tw-numeric-spacing: ;
+  --tw-numeric-fraction: ;
+  --tw-ring-inset: ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgba(59, 130, 246, .5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur: ;
+  --tw-brightness: ;
+  --tw-contrast: ;
+  --tw-grayscale: ;
+  --tw-hue-rotate: ;
+  --tw-invert: ;
+  --tw-saturate: ;
+  --tw-sepia: ;
+  --tw-drop-shadow: ;
+  --tw-backdrop-blur: ;
+  --tw-backdrop-brightness: ;
+  --tw-backdrop-contrast: ;
+  --tw-backdrop-grayscale: ;
+  --tw-backdrop-hue-rotate: ;
+  --tw-backdrop-invert: ;
+  --tw-backdrop-opacity: ;
+  --tw-backdrop-saturate: ;
+  --tw-backdrop-sepia: ;
+   font-family: 'Arial', sans-serif;
 }
 
-.App img.logo {
-  width: 150px;
-  margin-bottom: 20px;
-  transition: transform 0.2s;
+/* Header Styles */
+.header {
+  width: 99%;
+  /* background-image: linear-gradient(to bottom right, #c084fc, #d8d1e9); */
+  --tw-bg-opacity: 1;
+  background-color: rgb(219 228 217 / var(--tw-bg-opacity));
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
-.App img.logo:hover {
+.header img.logo {
+  width: 75px;
+}
+
+.header nav {
+  display: flex;
+  gap: 20px;
+}
+
+.header button {
+  background-color: transparent;
+  color: rgba(0, 0, 0, 0.8);
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 10px 15px;
+  border-radius: 5px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.header button:hover {
+  background-color: #ffffff00;
   transform: scale(1.05);
 }
 
-input[type="text"], button, .WalletMultiButton {
-  width: 50%;
-  padding: 15px 20px;
-  margin: 0 auto;
-  box-sizing: border-box;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  transition: all 0.3s ease-in-out;
-}
-
-input[type="text"]:focus, button:focus, .WalletMultiButton:focus {
+.header button:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0,123,255,.25);
 }
 
-input[type="text"] {
-  background-color: #ffffff;
-  font-size: 16px;
+.header .wallet-button {
+  background-color: #ffffff !important;
+  /* color: white !important; */
+  font-size: 16px !important;
+  padding: 10px 15px !important;
+  border-radius: 5px !important;
+  box-shadow: none !important;
+  transition: background-color 0.3s ease !important;
 }
 
-button, .WalletMultiButton {
-  background-color: #4CAF50;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
-  border: none;
+.header .wallet-button:hover {
+  background-color: #58ff984f !important;
 }
 
-button:hover, .WalletMultiButton:hover {
-  background-color: #45a049;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-div {
+/* Page Container */
+.page {
+  padding: 20px;
+  width: 50%;
+  max-width: 1200px;
+  margin: 20px auto;
+  /* background-image: linear-gradient(to bottom right, #c084fc, #d8d1e9); */
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 100%;
 }
 
-button:disabled,
-button[disabled]{
-  background-color: #cccccc;
-  color: #666666;
-}
-
-.title-header {
-  width: 100%;
-  padding: 20px;
-  background-color: #4e2cae;
-  color: white;
-  text-align: center;
+h1 {
   font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 30px; /* Added bottom margin for spacing */
+  margin-bottom: 20px;
+  color: rgba(0, 0, 0, .8);
+}
+
+/* Input and Button Styling */
+input[type="text"], button {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 15px;
+  margin: 10px 0;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 16px;
+  margin-right: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+button {
+  /* background-color: #ffffff00; */
+  /* color: rgba(255, 255, 255, 0); */
+  font-size: 16px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-right: 10px;
+}
+
+button:hover {
+  background-color: #9beea0;
+  transform: scale(1.05);
+}
+
+button:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Card for Forms */
+.card {
+  padding: 20px;
+  /* background-image: linear-gradient(to bottom right, #919ae9, #cea9f2); */
+  --tw-bg-opacity: 1;
+    background-color: rgb(243 255 239 / var(--tw-bg-opacity));
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+  text-align: center;
+  width: 50%;
+}
+
+.card h2 {
+  font-size: 20px;
+  color: rgba(0, 0, 0, .8);
+  margin-bottom: 15px;
+}
+
+.card-title {
+  font-size: 20px;
+  color: rgba(0, 0, 0, .8);
+  margin-bottom: 15px;
+  text-align: left;
 }
