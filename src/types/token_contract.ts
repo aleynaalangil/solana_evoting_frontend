@@ -47,8 +47,12 @@ export type TokenContract = {
       ],
       "args": [
         {
-          "name": "company",
+          "name": "shareholderPk",
           "type": "pubkey"
+        },
+        {
+          "name": "votingPower",
+          "type": "u128"
         }
       ]
     },
@@ -86,7 +90,11 @@ export type TokenContract = {
       ],
       "args": [
         {
-          "name": "company",
+          "name": "votingPower",
+          "type": "u128"
+        },
+        {
+          "name": "shareholderPk",
           "type": "pubkey"
         }
       ]

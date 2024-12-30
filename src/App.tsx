@@ -23,6 +23,12 @@ import {
     ASSOCIATED_TOKEN_PROGRAM_ID,
     getAssociatedTokenAddressSync,
     createTransferCheckedWithTransferHookInstruction,
+    createMintToInstruction,
+    getAssociatedTokenAddress,
+    createAssociatedTokenAccountInstruction,
+    transferChecked,
+    transferCheckedInstructionData,
+    createTransferCheckedInstruction
 } from '@solana/spl-token';
 import {
     createInitializeInstruction,
@@ -74,11 +80,16 @@ const Header: FC<{ setCurrentPage: (page: string) => void }> = ({ setCurrentPage
     );
 };
 
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
 const Polls: FC = () => {
     const wallet = useAnchorWallet();
     const { publicKey, sendTransaction } = useWallet();
     const [nftName, setNftName] = useState('');
-    const [shareholder, setShareholder] = useState('');
+    const [shareholder, setShareholder] = useState<PublicKey | Address>('');
     const [mint, setMint] = useState<Keypair | null>(null);
     const [companyAccount, setCompanyAccount] = useState<PublicKey | Address>('');
     const [nftDescription, setNftDescription] = useState('');
@@ -242,20 +253,21 @@ const Company: FC = () => {
     const wallet = useAnchorWallet();
     const { publicKey, sendTransaction } = useWallet();
     const [nftName, setNftName] = useState('');
-    const [shareholder, setShareholder] = useState('');
+    const [shareholder, setShareholder] = useState<PublicKey | Address>('');
     const [mint, setMint] = useState<Keypair | null>(null);
     const [companyAccount, setCompanyAccount] = useState<PublicKey | Address>('');
     const [nftDescription, setNftDescription] = useState('');
     const [totalSupply, setTotalSupply] = useState('');
     const [extraAccountMetaList, setExtraAccountMetaList] = useState<PublicKey | Address>('');
     const [whitelist, setWhitelist] = useState<PublicKey | Address>('');
-    const [treasury, setTreasury] = useState<PublicKey | null>(null);
+    const [treasury, setTreasury] = useState<PublicKey | Address>('');
     const [shareholderVotingPower, setShareholderVotingPower] = useState('');
     const [shareholderVote, setShareholderVote] = useState('');
     const [poll, setPoll] = useState<PublicKey | Address>('');
     const [optionId, setOptionId] = useState('');
     const [pollOptions, setPollOptions] = useState<string[]>([]);
     const [shareholderPubkeys, setShareholderPubkeys] = useState<string[]>([]);
+    const [shareholderDestinationTokenAccount, setShareholderDestinationTokenAccount] = useState<PublicKey | Address>('');
 
     const anchorWallet = useMemo(() => {
         if (!wallet?.publicKey || !wallet?.signTransaction || !wallet.signAllTransactions) return null;
@@ -286,11 +298,11 @@ const Company: FC = () => {
                     { memcmp: { offset: 0, bytes: wallet.publicKey.toBase58() } },
                 ],
             });
-
+            const x = accounts.map(account => account.account.owner.toBase58());
             const pubkeys = await tokenProgram.account.shareholder.all();
             // const pubkeys = await transferHookProgram.account.whiteList.all();
             const pubkeys2 = pubkeys.map(account => account.account.owner.toBase58());
-            setShareholderPubkeys(pubkeys2);
+            setShareholderPubkeys(x);
         };
 
         fetchShareholderPubkeys();
@@ -304,7 +316,7 @@ const Company: FC = () => {
             // const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
             // const transferHookProgram = new Program(idl2 as TransferHook, provider);
             // const tokenProgram = new Program(idl as TokenContract, provider);
-            const ATA_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+            // const ATA_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 
 
             // seeds = [b"company", payer.key().as_ref()],
@@ -319,11 +331,19 @@ const Company: FC = () => {
             const mint = new Keypair();
             setMint(mint);
 
-            const [treasury] = await anchor.web3.PublicKey.findProgramAddressSync( // TODO:this can be wrong.. double check
-                [anchorWallet.publicKey.toBytes(), TOKEN_2022_PROGRAM_ID.toBytes(), mint.publicKey.toBytes()],
-                ATA_PROGRAM_ID,
+            // const [treasury] = await anchor.web3.PublicKey.findProgramAddressSync( // TODO:this can be wrong.. double check
+            //     [anchorWallet.publicKey.toBytes(), TOKEN_2022_PROGRAM_ID.toBytes(), mint.publicKey.toBytes()],
+            //     ASSOCIATED_TOKEN_PROGRAM_ID,
+            // );
+            const treasury = await getAssociatedTokenAddress(
+                mint.publicKey,         // Mint's public key
+                anchorWallet.publicKey, // Owner of the account
+                false,                  // AllowOffCurve (usually false for ATA)
+                TOKEN_2022_PROGRAM_ID,   // SPL Token program (2022)
+                ASSOCIATED_TOKEN_PROGRAM_ID
             );
             setTreasury(treasury);
+
 
             console.log("treasury", treasury.toBase58());
 
@@ -331,6 +351,19 @@ const Company: FC = () => {
             const mintLen = getMintLen(extensions);
             const lamports = await provider.connection.getMinimumBalanceForRentExemption(mintLen);
             console.log("lamports", lamports); // how much lamports to create the mint (SOL)
+
+            if (isNaN(Number(totalSupply)) || totalSupply === null || totalSupply === undefined) {
+                console.log("Invalid totalSupply value");
+                return;
+            }
+
+            const bnTotalSupply = BigInt(totalSupply) * BigInt(Math.pow(10, 9));
+            console.log("bnTotalSupply", bnTotalSupply.toString);
+
+            if (bnTotalSupply === BigInt(0)) {
+                console.log("Total supply is 0");
+                return;
+            }
 
             const init = new web3.Transaction().add(
                 SystemProgram.createAccount({
@@ -351,10 +384,6 @@ const Company: FC = () => {
                 signers: [mint]
             });
             console.log("initSig", initSig);
-
-            console.log("transfer hook", transferHookProgram.programId.toBase58());
-            console.log("token program", TOKEN_2022_PROGRAM_ID.toBase58());
-
 
             const tx = new web3.Transaction().add(
                 createInitializeTransferHookInstruction(
@@ -428,26 +457,107 @@ const Company: FC = () => {
             const sig = await connection.sendRawTransaction(signedTx.serialize());
 
             console.log('Transaction Signature:', sig);
+
+            const ATA = createAssociatedTokenAccountInstruction(
+                anchorWallet.publicKey,
+                new PublicKey(treasury),
+                anchorWallet.publicKey,
+                mint.publicKey,
+                TOKEN_2022_PROGRAM_ID,
+                ASSOCIATED_TOKEN_PROGRAM_ID
+            );
+            console.log("ATA2", ATA);
+
+            // Instruction to mint tokens to associated token account
+            const mintToInstruction = createMintToInstruction(
+                mint.publicKey, // Mint Account address
+                new PublicKey(treasury), // Mint to
+                anchorWallet.publicKey, // Mint Authority address
+                new BN(bnTotalSupply), // Amount
+                [], // Additional signers
+                TOKEN_2022_PROGRAM_ID // Token Extension Program ID
+            );
+
+            // Transaction to create associated token account and mint tokens
+            const transaction2 = new web3.Transaction().add(
+                ATA,
+                mintToInstruction
+            );
+            const {
+                blockhash: blockhash2,
+                lastValidBlockHeight: lastValidBlockHeight2
+            } = await connection.getLatestBlockhash();
+
+            transaction2.recentBlockhash = blockhash2;
+            transaction2.lastValidBlockHeight = lastValidBlockHeight2;
+            transaction2.feePayer = anchorWallet.publicKey;
+            console.log(JSON.stringify(transaction2));
+
+            const signedTx2 = await anchorWallet?.signTransaction(transaction2);
+            const sig2 = await connection.sendRawTransaction(signedTx2.serialize());
+
+            console.log('Transaction Signature:', sig2);
+
         } catch (error) {
             console.error('Error:', error);
         }
-    }, [anchorWallet, nftName]);
+    }, [anchorWallet, nftName, shareholder, mint]);
 
     const onWhitelistShareholder = useCallback(async () => {
-        if (!anchorWallet) return;
+        if (!anchorWallet) {
+            console.log("No anchorWallet available");
+            return;
+        }
+
         try {
-            if (!mint) return;
+            if (!mint) {
+                console.log("No mint available");
+                return;
+            }
             const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
             const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
             const transferHookProgram = new Program(idl2 as TransferHook, provider);
 
+            console.log("Mint PublicKey:", mint.publicKey.toBase58());
+            console.log("Shareholder PublicKey:", shareholder.toString());
+            if (!mint.publicKey || !shareholder) {
+                console.log("No mint or shareholder available");
+                return;
+            }
+
+            const ataTx = new web3.Transaction()
             const destinationTokenAccount = getAssociatedTokenAddressSync(
                 mint.publicKey,
-                new PublicKey(shareholder),
+                shareholder as PublicKey,
                 false,
                 TOKEN_2022_PROGRAM_ID,
                 ASSOCIATED_TOKEN_PROGRAM_ID,
             );
+
+            const destinationTokenAccountInstruction = createAssociatedTokenAccountInstruction(
+                anchorWallet.publicKey,
+                destinationTokenAccount,
+                shareholder as PublicKey,
+                mint.publicKey,
+                TOKEN_2022_PROGRAM_ID,
+                ASSOCIATED_TOKEN_PROGRAM_ID,
+            );
+            ataTx.add(destinationTokenAccountInstruction);
+
+            console.log("ATA TX", JSON.stringify(ataTx));
+
+            const { blockhash: blockhashAta, lastValidBlockHeight: lastValidBlockHeightAta } = await connection.getLatestBlockhash();
+            ataTx.recentBlockhash = blockhashAta;
+            ataTx.lastValidBlockHeight = lastValidBlockHeightAta;
+            ataTx.feePayer = anchorWallet.publicKey;
+            const signedTxAta = await anchorWallet?.signTransaction(ataTx);
+            const sigAta = await connection.sendRawTransaction(signedTxAta.serialize());
+            console.log("sigAta", sigAta);
+
+            
+
+            console.log("Destination Token Account:", destinationTokenAccount.toBase58());
+            setShareholderDestinationTokenAccount(destinationTokenAccount);
 
             const tx = new web3.Transaction()
 
@@ -465,31 +575,31 @@ const Company: FC = () => {
             tx.feePayer = anchorWallet.publicKey;
 
             console.log(JSON.stringify(tx));
+            const serializedTransaction = tx.serialize({ requireAllSignatures: false, });
+            const base64 = serializedTransaction.toString("base64");
+            console.log("TEST TX", base64);
 
             const signedTx = await anchorWallet?.signTransaction(tx);
             const sig = await connection.sendRawTransaction(signedTx.serialize());
 
             console.log('Transaction Signature:', sig);
-            const auth_accounts = (await transferHookProgram.account.whiteList.all()).map(account => account.account.authority.toBase58())
-            const whitelist_accounts = (await transferHookProgram.account.whiteList.all()).map(account => account.account.whiteList.every(account => account.toBase58()))
-            const account_publickeys = (await transferHookProgram.account.whiteList.all()).map(account => account.publicKey.toBase58())
-            const whitelist = await transferHookProgram.account.whiteList.all()
-            console.log("auth_accounts", auth_accounts);
-            console.log("whitelist_accounts", whitelist_accounts);
-            console.log("account_publickeys", account_publickeys);
-            console.log("whitelist", whitelist);
         } catch (error) {
             console.error('Error:', error);
         }
     }, [anchorWallet, nftName, shareholder, mint]);
 
-    const onUnhitelistShareholder = useCallback(async () => {
+    const onUnwhitelistShareholder = useCallback(async () => {
         if (!anchorWallet) return;
         try {
             if (!mint) return;
             const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
             const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
             const transferHookProgram = new Program(idl2 as TransferHook, provider);
+
+            if (!shareholder) {
+                console.log("No shareholder available");
+                return;
+            }
 
             const tx = new web3.Transaction()
 
@@ -500,7 +610,7 @@ const Company: FC = () => {
                     company: companyAccount,
                     payer: anchorWallet.publicKey,
                 })
-                    .instruction();
+                .instruction();
             tx.add(removeShareholderInstruction);
 
             const { blockhash } = await connection.getLatestBlockhash();
@@ -513,8 +623,6 @@ const Company: FC = () => {
             const sig = await connection.sendRawTransaction(signedTx.serialize());
 
             console.log('Transaction Signature:', sig);
-            const is_whitelisted = (await tokenProgram.account.shareholder.all()).map(account => account.account.isWhitelisted)
-            console.log("is_whitelisted", is_whitelisted);
         } catch (error) {
             console.error('Error:', error);
         }
@@ -529,61 +637,78 @@ const Company: FC = () => {
             const transferHookProgram = new Program(idl2 as TransferHook, provider);
             const tokenProgram = new Program(idl as TokenContract, provider);
 
-            const destinationTokenAccount = getAssociatedTokenAddressSync(
-                mint.publicKey,
-                new PublicKey(shareholder),
-                false,
-                TOKEN_2022_PROGRAM_ID,
-                ASSOCIATED_TOKEN_PROGRAM_ID,
-            );
+            if (!shareholder.toString()) {
+                console.log("No shareholder available");
+                return;
+            }
 
             const tx = new web3.Transaction()
 
-            const is_whitelisted = (await tokenProgram.account.shareholder.fetchMultiple([shareholder]))[0]?.isWhitelisted;
+            const bnShareholderVotingPower = new BN(shareholderVotingPower);
 
-            if (!is_whitelisted) {
-                throw new Error("Shareholder is not whitelisted");
+            if (bnShareholderVotingPower.isZero()) {
+                console.log("Voting power is 0");
+                return;
             }
+
+            const newShareholderAccountAddress = Keypair.generate();
 
             const initializeShareholderByCompanyInstruction = await tokenProgram.methods
                 .addShareholderByCompany(
-                    new PublicKey(companyAccount)
+                    // @ts-ignore
+                    shareholder,
+                    bnShareholderVotingPower
                 )
                 .accounts({
-                    shareholder: shareholder,
-                    payer: anchorWallet.publicKey,
                     company: companyAccount,
+                    shareholder: newShareholderAccountAddress.publicKey,
+                    payer: anchorWallet.publicKey,
                 })
                 .instruction();
             tx.add(initializeShareholderByCompanyInstruction);
 
+            // const sig = await sendTransaction(tx, connection, {
+            //     signers: [newShareholderAccountAddress]
+            // });
+
+            // console.log('Transaction Signature:', sig);
+
+            const votingPowerSol = bnShareholderVotingPower * 10 ** 9;
+            console.log("votingPowerSol", votingPowerSol.toString());
+            if (BigInt(votingPowerSol) === BigInt(0)) {
+                console.log("Voting power is 0");
+                return;
+            }
+            console.log("treasury", treasury.toString());
+            console.log("shareholderDestinationTokenAccount", shareholderDestinationTokenAccount.toString()); //TODO: this can be not initialized yet
+
+            const tx2 = new web3.Transaction()
+            
             const transferInstruction = await createTransferCheckedWithTransferHookInstruction(
                 connection,
-                // @ts-ignore
-                new PublicKey(treasury),
+                treasury as PublicKey,
                 mint.publicKey,
-                destinationTokenAccount,
+                shareholderDestinationTokenAccount as PublicKey,
                 anchorWallet.publicKey,
-                new BN(shareholderVotingPower),
-                6,
+                new BN(votingPowerSol),
+                9,
                 [],
                 'confirmed',
-                TOKEN_2022_PROGRAM_ID,
-            );
-            tx.add(transferInstruction);
-
-
+                TOKEN_2022_PROGRAM_ID
+            )
+            tx2.add(transferInstruction);
 
             const { blockhash } = await connection.getLatestBlockhash();
-            tx.recentBlockhash = blockhash;
-            tx.feePayer = anchorWallet.publicKey;
+            tx2.recentBlockhash = blockhash;
+            tx2.feePayer = anchorWallet.publicKey;
 
-            console.log(JSON.stringify(tx));
+            const signedTx2 = await anchorWallet?.signTransaction(tx2);
+            const sig2 = await connection.sendRawTransaction(signedTx2.serialize());
 
-            const signedTx = await anchorWallet?.signTransaction(tx);
-            const sig = await connection.sendRawTransaction(signedTx.serialize());
+            console.log('Transaction Signature:', sig2);
 
-            console.log('Transaction Signature:', sig);
+            console.log(JSON.stringify(tx2));
+            
         } catch (error) {
             console.error('Error:', error);
         }
@@ -611,7 +736,7 @@ const Company: FC = () => {
             <div className='card'>
                 <h2 className='card-title'>Add Shareholder to Whitelist</h2>
                 <div className='input-group'>
-                    <input type="text" placeholder="Wallet Address" value={shareholder} onChange={(e) => setShareholder(e.target.value)} />
+                    <input type="text" placeholder="Wallet Address" value={shareholder.toString()} onChange={(e) => setShareholder(new PublicKey(e.target.value))} />
                 </div>
                 <div className='button-container'>
                     <button onClick={onWhitelistShareholder} disabled={!wallet?.publicKey || !shareholder}>
@@ -620,9 +745,20 @@ const Company: FC = () => {
                 </div>
             </div>
             <div className='card'>
+                <h2 className='card-title'>Remove Shareholder from Whitelist</h2>
+                <div className='input-group'>
+                    <input type="text" placeholder="Wallet Address" value={shareholder.toString()} onChange={(e) => setShareholder(new PublicKey(e.target.value))} />
+                </div>
+                <div className='button-container'>
+                    <button onClick={onUnwhitelistShareholder} disabled={!wallet?.publicKey || !shareholder}>
+                        Remove the Shareholder from the Whitelist
+                    </button>
+                </div>
+            </div>
+            <div className='card'>
                 <h2 className='card-title'>Manage Shareholder Voting Power</h2>
                 <div className='input-group'>
-                    <input type="text" placeholder="Wallet Address" value={shareholder} onChange={(e) => setShareholder(e.target.value)} />
+                    <input type="text" placeholder="Wallet Address" value={shareholder.toString()} onChange={(e) => setShareholder(new PublicKey(e.target.value))} />
                 </div>
                 <div className='input-group'>
                     <input type="text" placeholder="Shareholder Voting Power" value={shareholderVotingPower} onChange={(e) => setShareholderVotingPower(e.target.value)} />
@@ -649,7 +785,7 @@ const Shareholders: FC = () => {
     const wallet = useAnchorWallet();
     const { publicKey, sendTransaction } = useWallet();
     const [nftName, setNftName] = useState('');
-    const [shareholder, setShareholder] = useState('');
+    const [shareholder, setShareholder] = useState<PublicKey | Address>('');
     const [mint, setMint] = useState<Keypair | null>(null);
     const [companyAccount, setCompanyAccount] = useState<PublicKey | Address>('');
     const [nftDescription, setNftDescription] = useState('');
@@ -678,19 +814,39 @@ const Shareholders: FC = () => {
             const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
             const tokenProgram = new Program(idl as TokenContract, provider);
 
+            if (!shareholder || shareholder.toString() === '') {
+                console.log("No shareholder available");
+                return;
+            }
+
             const destinationTokenAccount = getAssociatedTokenAddressSync(
                 mint.publicKey,
-                new PublicKey(shareholder),
+                // @ts-ignore
+                shareholder,
                 false,
                 TOKEN_2022_PROGRAM_ID,
                 ASSOCIATED_TOKEN_PROGRAM_ID,
             );
 
             const tx = new web3.Transaction()
+            const votingPowerSol = new BN(shareholderVotingPower) * 10 ** 9;
+            console.log("votingPowerSol", votingPowerSol.toString());
+            if (BigInt(votingPowerSol) === BigInt(0)) {
+                console.log("Voting power is 0");
+                return;
+            }
+
+            if (!shareholder) {
+                console.log("No shareholder available");
+                return;
+            }
 
             const initializeShareholderByShareholderInstruction = await tokenProgram.methods
                 .addShareholderByShareholder(
-                    new PublicKey(companyAccount)
+                    // @ts-ignore
+                    votingPowerSol,
+                    // @ts-ignore
+                    shareholder
                 )
                 .accounts({
                     shareholder: shareholder,
@@ -735,7 +891,7 @@ const Shareholders: FC = () => {
             <div className='card'>
                 <h2 className='card-title'>Manage Shareholder Voting Power</h2>
                 <div className='input-group'>
-                    <input type="text" placeholder="Wallet Address" value={shareholder} onChange={(e) => setShareholder(e.target.value)} />
+                    <input type="text" placeholder="Wallet Address" value={shareholder.toString()} onChange={(e) => setShareholder(new PublicKey(e.target.value))} />
                 </div>
                 <div className='input-group'>
                     <input type="text" placeholder="Shareholder Voting Power" value={shareholderVotingPower} onChange={(e) => setShareholderVotingPower(e.target.value)} />

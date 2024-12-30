@@ -41,8 +41,12 @@
       ],
       "args": [
         {
-          "name": "company",
+          "name": "shareholder_pk",
           "type": "pubkey"
+        },
+        {
+          "name": "voting_power",
+          "type": "u128"
         }
       ]
     },
@@ -80,7 +84,11 @@
       ],
       "args": [
         {
-          "name": "company",
+          "name": "voting_power",
+          "type": "u128"
+        },
+        {
+          "name": "shareholder_pk",
           "type": "pubkey"
         }
       ]
