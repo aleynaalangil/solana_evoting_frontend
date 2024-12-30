@@ -1,4 +1,4 @@
-/* General App Styles */
+/* General App Styles
 .App {
   display: flex;
   flex-direction: column;
@@ -6,7 +6,6 @@
   justify-content: flex-start;
   text-align: center;
   min-height: 100vh;
-  /* background-image: linear-gradient(to bottom right, #c084fc, #d8d1e9); */
   --tw-border-spacing-x: 0;
   --tw-border-spacing-y: 0;
   --tw-translate-x: 0;
@@ -57,10 +56,8 @@
    font-family: 'Arial', sans-serif;
 }
 
-/* Header Styles */
 .header {
   width: 99%;
-  /* background-image: linear-gradient(to bottom right, #c084fc, #d8d1e9); */
   --tw-bg-opacity: 1;
   background-color: rgb(219 228 217 / var(--tw-bg-opacity));
   padding: 15px 20px;
@@ -105,7 +102,6 @@
 
 .header .wallet-button {
   background-color: #ffffff !important;
-  /* color: white !important; */
   font-size: 16px !important;
   padding: 10px 15px !important;
   border-radius: 5px !important;
@@ -117,13 +113,11 @@
   background-color: #58ff984f !important;
 }
 
-/* Page Container */
 .page {
   padding: 20px;
   width: 50%;
   max-width: 1200px;
   margin: 20px auto;
-  /* background-image: linear-gradient(to bottom right, #c084fc, #d8d1e9); */
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -137,7 +131,6 @@ h1 {
   color: rgba(0, 0, 0, .8);
 }
 
-/* Input and Button Styling */
 input[type="text"], button {
   width: 100%;
   max-width: 400px;
@@ -161,8 +154,6 @@ input[type="text"]:focus {
 }
 
 button {
-  /* background-color: #ffffff00; */
-  /* color: rgba(255, 255, 255, 0); */
   font-size: 16px;
   cursor: pointer;
   border: none;
@@ -183,10 +174,8 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Card for Forms */
 .card {
   padding: 20px;
-  /* background-image: linear-gradient(to bottom right, #919ae9, #cea9f2); */
   --tw-bg-opacity: 1;
     background-color: rgb(243 255 239 / var(--tw-bg-opacity));
   border-radius: 10px;
@@ -207,4 +196,193 @@ button:disabled {
   color: rgba(0, 0, 0, .8);
   margin-bottom: 15px;
   text-align: left;
+} */
+
+/* General App Styles */
+.App {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  min-height: 100vh;
+  font-family: 'Arial', sans-serif;
+  /* A simple gradient background */
+  background: linear-gradient(to bottom right, #FAF5FF, #E2FDE3);
+  margin: 0;
+  padding: 0;
+}
+
+/* Header Styles */
+.header {
+  width: 100%;
+  background-color: #FFFFFFCC; /* Slightly translucent white */
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header img.logo {
+  width: 60px;
+}
+
+.header nav {
+  display: flex;
+  gap: 20px;
+}
+
+.header button {
+  background-color: transparent;
+  color: #333;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 5px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.header button:hover {
+  background-color: #eee;
+  transform: scale(1.03);
+}
+
+.header button:focus {
+  outline: none;
+}
+
+.header .wallet-button {
+  background-color: #fff !important;
+  font-size: 16px !important;
+  padding: 8px 12px !important;
+  border-radius: 5px !important;
+  box-shadow: none !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.header .wallet-button:hover {
+  background-color: #58ff984f !important;
+  transform: scale(1.03);
+}
+
+/* Page Container */
+.page {
+  padding: 20px;
+  width: 80%; /* Changed from 50% */
+  max-width: 1000px;
+  margin: 30px auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Headings */
+h1 {
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #333;
+  font-weight: bold;
+}
+
+/* Input and Button Styling */
+input[type="text"], button {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 15px;
+  margin: 10px 0;
+  box-sizing: border-box;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-right: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Inputs */
+input[type="text"] {
+  border: 1px solid #ccc;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+/* Buttons */
+button {
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-right: 10px;
+  background-color: #fff;
+  border: 1px solid #CCC;
+}
+
+button:hover {
+  background-color: #c3ffc9;
+  transform: scale(1.03);
+}
+
+button:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* Card for Forms & Content Blocks */
+.card {
+  width: 60%;
+  background-color: #ffffffdd; /* Slightly translucent white */
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+  padding: 20px;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+}
+
+.card h2 {
+  font-size: 22px;
+  color: #333;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.card-title {
+  font-size: 20px;
+  color: #333;
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+/* Lists inside the card */
+.card ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.card li {
+  background: #F3FFE7;
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.card li p {
+  margin: 0;
+  color: #333;
 }

@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/token_contract.json`.
  */
 export type TokenContract = {
-  "address": "2TE5kuPuKgoXoBEtDB6EhCvP5yVRJGiS2DnthZNw3oP4",
+  "address": "HKj8pzMK6w6pSbdtzj1Q315xFrtpMWypnzzUK4JV6SSB",
   "metadata": {
     "name": "tokenContract",
     "version": "0.1.0",
@@ -53,49 +53,6 @@ export type TokenContract = {
         {
           "name": "votingPower",
           "type": "u128"
-        }
-      ]
-    },
-    {
-      "name": "addShareholderByShareholder",
-      "discriminator": [
-        17,
-        239,
-        159,
-        147,
-        136,
-        17,
-        33,
-        239
-      ],
-      "accounts": [
-        {
-          "name": "company",
-          "writable": true
-        },
-        {
-          "name": "shareholder",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "votingPower",
-          "type": "u128"
-        },
-        {
-          "name": "shareholderPk",
-          "type": "pubkey"
         }
       ]
     },
@@ -276,6 +233,14 @@ export type TokenContract = {
         {
           "name": "voteId",
           "type": "u8"
+        },
+        {
+          "name": "shareholderOwner",
+          "type": "pubkey"
+        },
+        {
+          "name": "shareholderVotingPower",
+          "type": "u128"
         }
       ]
     }

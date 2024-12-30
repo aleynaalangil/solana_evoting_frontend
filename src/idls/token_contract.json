@@ -1,5 +1,5 @@
 {
-  "address": "2TE5kuPuKgoXoBEtDB6EhCvP5yVRJGiS2DnthZNw3oP4",
+  "address": "HKj8pzMK6w6pSbdtzj1Q315xFrtpMWypnzzUK4JV6SSB",
   "metadata": {
     "name": "token_contract",
     "version": "0.1.0",
@@ -47,49 +47,6 @@
         {
           "name": "voting_power",
           "type": "u128"
-        }
-      ]
-    },
-    {
-      "name": "add_shareholder_by_shareholder",
-      "discriminator": [
-        17,
-        239,
-        159,
-        147,
-        136,
-        17,
-        33,
-        239
-      ],
-      "accounts": [
-        {
-          "name": "company",
-          "writable": true
-        },
-        {
-          "name": "shareholder",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "voting_power",
-          "type": "u128"
-        },
-        {
-          "name": "shareholder_pk",
-          "type": "pubkey"
         }
       ]
     },
@@ -270,6 +227,14 @@
         {
           "name": "vote_id",
           "type": "u8"
+        },
+        {
+          "name": "shareholder_owner",
+          "type": "pubkey"
+        },
+        {
+          "name": "shareholder_voting_power",
+          "type": "u128"
         }
       ]
     }
