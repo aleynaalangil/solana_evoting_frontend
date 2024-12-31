@@ -57,6 +57,69 @@ export type TokenContract = {
       ]
     },
     {
+      "name": "delegateVoteRights",
+      "discriminator": [
+        112,
+        73,
+        192,
+        176,
+        139,
+        0,
+        3,
+        125
+      ],
+      "accounts": [
+        {
+          "name": "company",
+          "writable": true
+        },
+        {
+          "name": "shareholder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "newDelegatedTo",
+          "type": "pubkey"
+        },
+        {
+          "name": "shareholderVotingPower",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "finishPoll",
+      "discriminator": [
+        78,
+        50,
+        124,
+        63,
+        206,
+        128,
+        10,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "poll",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initializeCompany",
       "discriminator": [
         75,
@@ -167,35 +230,21 @@ export type TokenContract = {
       ]
     },
     {
-      "name": "removeShareholder",
+      "name": "tallyVotes",
       "discriminator": [
-        66,
-        175,
-        86,
-        173,
-        126,
-        193,
-        86,
-        239
+        144,
+        82,
+        0,
+        72,
+        160,
+        132,
+        35,
+        121
       ],
       "accounts": [
         {
-          "name": "company",
+          "name": "poll",
           "writable": true
-        },
-        {
-          "name": "shareholder",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "payer",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "systemProgram",
-          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []

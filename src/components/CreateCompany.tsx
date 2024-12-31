@@ -591,45 +591,45 @@ const Company: FC = () => {
         }
     }, [anchorWallet, nftName, shareholder, mint]);
 
-    const onUnwhitelistShareholder = useCallback(async () => {
-        if (!anchorWallet) return;
-        try {
-            if (!mint) return;
-            const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
-            const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
-            const transferHookProgram = new Program(idl2 as TransferHook, provider);
-            const tokenProgram = new Program(idl as TokenContract, provider);
-            if (!shareholder) {
-                console.log("No shareholder available");
-                return;
-            }
+    // const onUnwhitelistShareholder = useCallback(async () => {
+    //     if (!anchorWallet) return;
+    //     try {
+    //         if (!mint) return;
+    //         const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
+    //         const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
+    //         const transferHookProgram = new Program(idl2 as TransferHook, provider);
+    //         const tokenProgram = new Program(idl as TokenContract, provider);
+    //         if (!shareholder) {
+    //             console.log("No shareholder available");
+    //             return;
+    //         }
 
-            const tx = new web3.Transaction()
+    //         const tx = new web3.Transaction()
 
-            const removeShareholderInstruction = await tokenProgram.methods
-                .removeShareholder()
-                .accounts({
-                    shareholder: shareholder,
-                    company: companyAccount,
-                    payer: anchorWallet.publicKey,
-                })
-                .instruction();
-            tx.add(removeShareholderInstruction);
+    //         const removeShareholderInstruction = await tokenProgram.methods
+    //             .removeShareholder()
+    //             .accounts({
+    //                 shareholder: shareholder,
+    //                 company: companyAccount,
+    //                 payer: anchorWallet.publicKey,
+    //             })
+    //             .instruction();
+    //         tx.add(removeShareholderInstruction);
 
-            const { blockhash } = await connection.getLatestBlockhash();
-            tx.recentBlockhash = blockhash;
-            tx.feePayer = anchorWallet.publicKey;
+    //         const { blockhash } = await connection.getLatestBlockhash();
+    //         tx.recentBlockhash = blockhash;
+    //         tx.feePayer = anchorWallet.publicKey;
 
-            console.log(JSON.stringify(tx));
+    //         console.log(JSON.stringify(tx));
 
-            const signedTx = await anchorWallet?.signTransaction(tx);
-            const sig = await connection.sendRawTransaction(signedTx.serialize());
+    //         const signedTx = await anchorWallet?.signTransaction(tx);
+    //         const sig = await connection.sendRawTransaction(signedTx.serialize());
 
-            console.log('Transaction Signature:', sig);
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    }, [anchorWallet, nftName, shareholder, mint]);
+    //         console.log('Transaction Signature:', sig);
+    //     } catch (error) {
+    //         console.error('Error:', error);
+    //     }
+    // }, [anchorWallet, nftName, shareholder, mint]);
 
     const onInitializeShareholderByCompany = useCallback(async () => {
         if (!anchorWallet) return;
@@ -765,11 +765,11 @@ const Company: FC = () => {
                 <div className='input-group'>
                     <input type="text" placeholder="Wallet Address" value={shareholder.toString()} onChange={(e) => setShareholder(new PublicKey(e.target.value))} />
                 </div>
-                <div className='button-container'>
+                {/* <div className='button-container'>
                     <button onClick={onUnwhitelistShareholder} disabled={!wallet?.publicKey || !shareholder}>
                         Remove the Shareholder from the Whitelist
                     </button>
-                </div>
+                </div> */}
             </div>
             <div className='card'>
                 <h2 className='card-title'>Manage Shareholder Voting Power</h2>

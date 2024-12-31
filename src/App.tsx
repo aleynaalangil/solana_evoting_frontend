@@ -211,13 +211,13 @@ const Polls: FC = () => {
             const shareholders = await tokenProgram.account.shareholder.all();
             let shareholderPk: PublicKey | null = null;
             let shareholdersLength = shareholders.length;
-
-
-
+            let totalVotes = 0;
+            
             for (let i = 0; i < shareholdersLength; i++) {
                 if (shareholders[i].account.owner.toBase58() === anchorWallet.publicKey.toBase58()) {
                     shareholderPk = shareholders[i].publicKey;
                 }
+                totalVotes += shareholders[i].account.votingPower;
             }
             if (!shareholderPk) {
                 console.error("No shareholder account found for the current wallet.");
@@ -256,6 +256,60 @@ const Polls: FC = () => {
             const signedTx = await anchorWallet.signTransaction(tx);
             const sig = await connection.sendRawTransaction(signedTx.serialize());
             console.log('Transaction Signature:', sig);
+
+            await sleep(2000);
+
+            const pollAccountForFinishCheck = await tokenProgram.account.poll.fetch(pollPublicKey);
+            let pollVotes = 0;
+            let winnerOption = "";
+            
+            for( let i = 0; i < pollAccountForFinishCheck.options.length; i++) {
+                pollVotes += pollAccountForFinishCheck.options[i].votes.toNumber();
+
+            }
+            let maxVotes = 0;
+            for( let i = 0; i < pollAccountForFinishCheck.options.length; i++) {
+                if(pollAccountForFinishCheck.options[i].votes.toNumber() > maxVotes) {
+                    maxVotes = pollAccountForFinishCheck.options[i].votes.toNumber();
+                    winnerOption = pollAccountForFinishCheck.options[i].label;
+                }
+            }
+            console.log("Winner Option: " + winnerOption);
+            if (pollVotes === totalVotes) {
+                console.log("Poll is over");
+                let maxVotes = 0;
+                for( let i = 0; i < pollAccountForFinishCheck.options.length; i++) {
+                    if(pollAccountForFinishCheck.options[i].votes.toNumber() > maxVotes) {
+                        maxVotes = pollAccountForFinishCheck.options[i].votes.toNumber();
+                        winnerOption = pollAccountForFinishCheck.options[i].label;
+                    }
+                }
+                console.log("Winner Option: " + winnerOption + " with " + maxVotes + " votes in the client side");
+                const tx2 = new web3.Transaction();
+                const finishPollInstruction = await tokenProgram.methods
+                    .finishPoll()
+                    .accounts({
+                        poll: pollPublicKey,
+                    })
+                    .instruction();
+                tx2.add(finishPollInstruction);
+
+                const voteTallyTX = await tokenProgram.methods
+                .tallyVotes()
+                .accounts({
+                    poll: pollPublicKey,
+                })
+                .instruction();
+                tx2.add(voteTallyTX);
+
+                const { blockhash: blockhash2 } = await connection.getLatestBlockhash();
+                tx2.recentBlockhash = blockhash2;
+                tx2.feePayer = anchorWallet.publicKey;
+                const pollFinishedTX  = await anchorWallet.signTransaction(tx2);
+                const pollFinishedSig = await connection.sendRawTransaction(pollFinishedTX.serialize());
+                console.log("Poll Finished Sig:", pollFinishedSig);
+                return;
+            }
 
         } catch (error) {
             console.error('Error voting:', error);
@@ -591,12 +645,14 @@ const Company: FC = () => {
             const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
             const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
             const transferHookProgram = new Program(idl2 as TransferHook, provider);
+            const tokenProgram = new Program(idl as TokenContract, provider);
 
             // Prepare the ATA for the shareholder
             if (!shareholder) {
                 console.log("No shareholder address provided.");
                 return;
             }
+
             const destinationTokenAccount = getAssociatedTokenAddressSync(
                 mintPubkey,
                 shareholder,
@@ -604,6 +660,21 @@ const Company: FC = () => {
                 TOKEN_2022_PROGRAM_ID,
                 ASSOCIATED_TOKEN_PROGRAM_ID,
             );
+
+            const fetchedShareholders = await tokenProgram.account.shareholder.all();
+            const shareholdersLength = fetchedShareholders.length;
+
+            for (let i = 0; i < shareholdersLength; i++) {
+                if (fetchedShareholders[i].account.owner.toBase58() === shareholder.toBase58()) {
+                    if (fetchedShareholders[i].account.isWhitelisted) {
+                        alert("Shareholder already whitelisted");
+                        return;
+                    }
+                    alert("Shareholder already exists");
+                    return;
+                }
+            }
+
             setShareholderDestinationTokenAccount(destinationTokenAccount);
 
             // Create transaction for the ATA
@@ -650,49 +721,75 @@ const Company: FC = () => {
     }, [anchorWallet, companyAccount, mint, shareholder, ensureOnChainState]);
 
     /* ------------------------ onUnwhitelistShareholder ------------------------ */
-    const onUnwhitelistShareholder = useCallback(async () => {
-        if (!anchorWallet) return;
+    // const onUnwhitelistShareholder = useCallback(async () => {
+    //     if (!anchorWallet) return;
 
-        // 1) Ensure we have a mint / company
-        const { companyPda, mintPubkey } = await ensureOnChainState();
-        if (!mintPubkey || !companyPda) {
-            console.log("Mint or company not found, aborting unwhitelist call.");
-            return;
-        }
+    //     // 1) Ensure we have a mint / company
+    //     const { companyPda, mintPubkey } = await ensureOnChainState();
+    //     if (!mintPubkey || !companyPda) {
+    //         console.log("Mint or company not found, aborting unwhitelist call.");
+    //         return;
+    //     }
 
-        try {
-            const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
-            const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
-            const tokenProgram = new Program(idl as TokenContract, provider);
+    //     try {
+    //         const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
+    //         const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
+    //         const tokenProgram = new Program(idl as TokenContract, provider);
 
-            if (!shareholder) {
-                console.log("No shareholder address provided.");
-                return;
-            }
+    //         if (!shareholder) {
+    //             console.log("No shareholder address provided.");
+    //             return;
+    //         }
+    //         const destinationTokenAccount = getAssociatedTokenAddressSync(
+    //             mintPubkey,
+    //             shareholder,
+    //             false,
+    //             TOKEN_2022_PROGRAM_ID,
+    //             ASSOCIATED_TOKEN_PROGRAM_ID,
+    //         );
 
-            const tx = new Transaction();
-            const removeShareholderIx = await tokenProgram.methods
-                .removeShareholder()
-                .accounts({
-                    shareholder: shareholder,
-                    company: companyPda,
-                    payer: anchorWallet.publicKey,
-                })
-                .instruction();
-            tx.add(removeShareholderIx);
+    //         const tx = new Transaction();
+    //         const removeShareholderIx = await tokenProgram.methods
+    //             .removeShareholder()
+    //             .accounts({
+    //                 shareholder: destinationTokenAccount,
+    //                 company: companyPda,
+    //                 payer: anchorWallet.publicKey,
+    //             })
+    //             .instruction();
+    //         tx.add(removeShareholderIx);
 
-            let { blockhash } = await connection.getLatestBlockhash();
-            tx.recentBlockhash = blockhash;
-            tx.feePayer = anchorWallet.publicKey;
+    //         console.log("tx: ", JSON.stringify(tx));
 
-            const signedTx = await anchorWallet.signTransaction(tx);
-            const sig = await connection.sendRawTransaction(signedTx.serialize());
-            console.log('Remove Shareholder Sig:', sig);
+    //         let { blockhash } = await connection.getLatestBlockhash();
+    //         tx.recentBlockhash = blockhash;
+    //         tx.feePayer = anchorWallet.publicKey;
 
-        } catch (err) {
-            console.error("Error unwhitelisting shareholder:", err);
-        }
-    }, [anchorWallet, companyAccount, mint, shareholder, ensureOnChainState]);
+    //         const signedTx = await anchorWallet.signTransaction(tx);
+    //         const sig = await connection.sendRawTransaction(signedTx.serialize());
+
+    //         console.log('Remove Shareholder Sig:', sig);
+            
+    //         sleep(3000);
+
+    //         const fetchedShareholders = await tokenProgram.account.shareholder.all();
+    //         const shareholdersLength = fetchedShareholders.length;
+
+    //         for (let i = 0; i < shareholdersLength; i++) {
+    //             if (fetchedShareholders[i].account.owner.toBase58() === shareholder.toBase58()) {
+    //                 if (!fetchedShareholders[i].account.isWhitelisted) {
+    //                     alert("Shareholder already unwhitelisted");
+    //                     return;
+    //                 }
+    //                 alert("Shareholder already exists");
+    //                 return;
+    //             }
+    //         }          
+
+    //     } catch (err) {
+    //         console.error("Error unwhitelisting shareholder:", err);
+    //     }
+    // }, [anchorWallet, companyAccount, mint, shareholder, ensureOnChainState]);
 
     /* --------------------- onInitializeShareholderByCompany -------------------- */
     const onInitializeShareholderByCompany = useCallback(async () => {
@@ -712,6 +809,15 @@ const Company: FC = () => {
             if (!shareholder || shareholderVotingPower === '') {
                 console.log("Shareholder or voting power missing.");
                 return;
+            }
+            const fetchedShareholders = await tokenProgram.account.shareholder.all();
+            const shareholdersLength = fetchedShareholders.length;
+
+            for (let i = 0; i < shareholdersLength; i++) {
+                if (fetchedShareholders[i].account.owner.toBase58() === shareholder.toBase58()) {
+                    alert("Shareholder already exists");
+                    return;
+                }
             }
 
             // 1) Create a new keypair for the shareholder
@@ -864,7 +970,7 @@ const Company: FC = () => {
             </div>
 
             {/* Unwhitelist Shareholder */}
-            <div className='card'>
+            {/* <div className='card'>
                 <h2 className='card-title'>Remove Shareholder from Whitelist</h2>
                 <div className='input-group'>
                     <input
@@ -876,6 +982,7 @@ const Company: FC = () => {
                         }}
                     />
                 </div>
+                 TODO: implement a delegation logic instead of this 
                 <div className='button-container'>
                     <button
                         onClick={onUnwhitelistShareholder}
@@ -884,11 +991,11 @@ const Company: FC = () => {
                         Remove the Shareholder
                     </button>
                 </div>
-            </div>
+            </div> */}
 
             {/* Manage Shareholder Voting Power */}
             <div className='card'>
-                <h2 className='card-title'>Manage Shareholder Voting Power</h2>
+                <h2 className='card-title'>Initialize Shareholder and Voting Power</h2>
                 <div className='input-group'>
                     <input
                         type="text"
@@ -919,6 +1026,16 @@ const Company: FC = () => {
         </div>
     );
 };
+
+const Shareholders: FC = () => {
+
+
+    return (
+        <div>
+            <h1>Shareholders Page</h1>
+        </div>
+    );
+}
 
 
 /* -------------------------------------------------------------------------- */
