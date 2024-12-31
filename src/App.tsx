@@ -36,7 +36,6 @@ import {
     createInitializeInstruction,
 } from "@solana/spl-token-metadata";
 import { MintProvider, useMintContext } from './components/Mint';
-import { min } from 'bn.js';
 require('@solana/wallet-adapter-react-ui/styles.css');
 require('./App.css');
 
