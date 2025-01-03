@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/token_contract.json`.
  */
 export type TokenContract = {
-  "address": "HKj8pzMK6w6pSbdtzj1Q315xFrtpMWypnzzUK4JV6SSB",
+  "address": "Ajf6V1JscbNyFc5zyhm3DvDcZrNeqMvYsji2CrKvsum1",
   "metadata": {
     "name": "tokenContract",
     "version": "0.1.0",
@@ -96,6 +96,10 @@ export type TokenContract = {
         {
           "name": "shareholderVotingPower",
           "type": "u128"
+        },
+        {
+          "name": "company",
+          "type": "pubkey"
         }
       ]
     },
@@ -230,6 +234,41 @@ export type TokenContract = {
       ]
     },
     {
+      "name": "removeShareholder",
+      "discriminator": [
+        66,
+        175,
+        86,
+        173,
+        126,
+        193,
+        86,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "company",
+          "writable": true,
+          "relations": [
+            "shareholder"
+          ]
+        },
+        {
+          "name": "shareholder",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "company"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "tallyVotes",
       "discriminator": [
         144,
@@ -338,15 +377,13 @@ export type TokenContract = {
   "errors": [
     {
       "code": 6000,
-      "name": "pollAlreadyFinished"
+      "name": "unauthorized",
+      "msg": "You are not the company authority"
     },
     {
       "code": 6001,
-      "name": "pollOptionNotFound"
-    },
-    {
-      "code": 6002,
-      "name": "userAlreadyVoted"
+      "name": "underflow",
+      "msg": "Shareholder count underflow"
     }
   ],
   "types": [
@@ -446,14 +483,6 @@ export type TokenContract = {
           {
             "name": "votingPower",
             "type": "u128"
-          },
-          {
-            "name": "delegatedTo",
-            "type": "pubkey"
-          },
-          {
-            "name": "isWhitelisted",
-            "type": "bool"
           },
           {
             "name": "company",

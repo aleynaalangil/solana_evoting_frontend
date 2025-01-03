@@ -1,5 +1,5 @@
 {
-  "address": "7evqQb556TKMSHnKFLbsGQvTDceXNGGdS8yPDaBA4Hep",
+  "address": "EGqyf8VoRxvyoy7Fxtowu6UAp83CZgNFuks6DsNHr17G",
   "metadata": {
     "name": "transfer_hook",
     "version": "0.1.0",
@@ -52,7 +52,12 @@
           "signer": true
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "wallet_account",
+          "type": "pubkey"
+        }
+      ]
     },
     {
       "name": "initialize_extra_account_meta_list",
@@ -140,6 +145,44 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "remove_from_whitelist",
+      "discriminator": [
+        7,
+        144,
+        216,
+        239,
+        243,
+        236,
+        193,
+        235
+      ],
+      "accounts": [
+        {
+          "name": "account_to_remove",
+          "docs": [
+            "The token account you want to remove",
+            "(and we might also need the wallet key as an arg too)",
+            "/// CHECK: account_to_remove is a token account"
+          ]
+        },
+        {
+          "name": "white_list",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "wallet_account",
+          "type": "pubkey"
+        }
+      ]
     },
     {
       "name": "transfer_hook",
@@ -252,6 +295,16 @@
       "code": 6000,
       "name": "IsNotCurrentlyTransferring",
       "msg": "The token is not currently transferring"
+    },
+    {
+      "code": 6001,
+      "name": "NotWhitelistAuthority",
+      "msg": "Only the whitelist authority can modify the whitelist"
+    },
+    {
+      "code": 6002,
+      "name": "WalletAlreadyWhitelisted",
+      "msg": "This (token_account, wallet_account) pair is already whitelisted"
     }
   ],
   "types": [
@@ -267,8 +320,28 @@
           {
             "name": "white_list",
             "type": {
-              "vec": "pubkey"
+              "vec": {
+                "defined": {
+                  "name": "WhitelistEntry"
+                }
+              }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "WhitelistEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "wallet_account",
+            "type": "pubkey"
           }
         ]
       }

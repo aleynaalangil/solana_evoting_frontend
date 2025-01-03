@@ -1,5 +1,5 @@
 {
-  "address": "HKj8pzMK6w6pSbdtzj1Q315xFrtpMWypnzzUK4JV6SSB",
+  "address": "Ajf6V1JscbNyFc5zyhm3DvDcZrNeqMvYsji2CrKvsum1",
   "metadata": {
     "name": "token_contract",
     "version": "0.1.0",
@@ -90,6 +90,10 @@
         {
           "name": "shareholder_voting_power",
           "type": "u128"
+        },
+        {
+          "name": "company",
+          "type": "pubkey"
         }
       ]
     },
@@ -224,6 +228,41 @@
       ]
     },
     {
+      "name": "remove_shareholder",
+      "discriminator": [
+        66,
+        175,
+        86,
+        173,
+        126,
+        193,
+        86,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "company",
+          "writable": true,
+          "relations": [
+            "shareholder"
+          ]
+        },
+        {
+          "name": "shareholder",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "company"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "tally_votes",
       "discriminator": [
         144,
@@ -332,15 +371,13 @@
   "errors": [
     {
       "code": 6000,
-      "name": "PollAlreadyFinished"
+      "name": "Unauthorized",
+      "msg": "You are not the company authority"
     },
     {
       "code": 6001,
-      "name": "PollOptionNotFound"
-    },
-    {
-      "code": 6002,
-      "name": "UserAlreadyVoted"
+      "name": "Underflow",
+      "msg": "Shareholder count underflow"
     }
   ],
   "types": [
@@ -440,14 +477,6 @@
           {
             "name": "voting_power",
             "type": "u128"
-          },
-          {
-            "name": "delegated_to",
-            "type": "pubkey"
-          },
-          {
-            "name": "is_whitelisted",
-            "type": "bool"
           },
           {
             "name": "company",

@@ -565,7 +565,7 @@ const Company: FC = () => {
             const tx = new web3.Transaction()
 
             const addAccountToWhiteListInstruction = await transferHookProgram.methods
-                .addToWhitelist()
+                .addToWhitelist(shareholder as PublicKey)
                 .accounts({
                     newAccount: destinationTokenAccount,
                     signer: anchorWallet.publicKey,

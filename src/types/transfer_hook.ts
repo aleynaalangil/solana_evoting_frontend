@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/transfer_hook.json`.
  */
 export type TransferHook = {
-  "address": "7evqQb556TKMSHnKFLbsGQvTDceXNGGdS8yPDaBA4Hep",
+  "address": "EGqyf8VoRxvyoy7Fxtowu6UAp83CZgNFuks6DsNHr17G",
   "metadata": {
     "name": "transferHook",
     "version": "0.1.0",
@@ -58,7 +58,12 @@ export type TransferHook = {
           "signer": true
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "walletAccount",
+          "type": "pubkey"
+        }
+      ]
     },
     {
       "name": "initializeExtraAccountMetaList",
@@ -146,6 +151,44 @@ export type TransferHook = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "removeFromWhitelist",
+      "discriminator": [
+        7,
+        144,
+        216,
+        239,
+        243,
+        236,
+        193,
+        235
+      ],
+      "accounts": [
+        {
+          "name": "accountToRemove",
+          "docs": [
+            "The token account you want to remove",
+            "(and we might also need the wallet key as an arg too)",
+            "/// CHECK: account_to_remove is a token account"
+          ]
+        },
+        {
+          "name": "whiteList",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "walletAccount",
+          "type": "pubkey"
+        }
+      ]
     },
     {
       "name": "transferHook",
@@ -258,6 +301,16 @@ export type TransferHook = {
       "code": 6000,
       "name": "isNotCurrentlyTransferring",
       "msg": "The token is not currently transferring"
+    },
+    {
+      "code": 6001,
+      "name": "notWhitelistAuthority",
+      "msg": "Only the whitelist authority can modify the whitelist"
+    },
+    {
+      "code": 6002,
+      "name": "walletAlreadyWhitelisted",
+      "msg": "This (token_account, wallet_account) pair is already whitelisted"
     }
   ],
   "types": [
@@ -273,8 +326,28 @@ export type TransferHook = {
           {
             "name": "whiteList",
             "type": {
-              "vec": "pubkey"
+              "vec": {
+                "defined": {
+                  "name": "whitelistEntry"
+                }
+              }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "whitelistEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tokenAccount",
+            "type": "pubkey"
+          },
+          {
+            "name": "walletAccount",
+            "type": "pubkey"
           }
         ]
       }
