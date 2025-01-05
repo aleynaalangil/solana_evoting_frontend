@@ -1,5 +1,5 @@
 {
-  "address": "9DDVM9Un2wnhE3rjh11XV4LHraw422oK8NymjGpSPAxP",
+  "address": "FTYJzS4zX9puYkmGE23zgtSkghLcjHeF6dYVoUabxpPk",
   "metadata": {
     "name": "transfer_hook",
     "version": "0.1.0",
@@ -8,23 +8,20 @@
   },
   "instructions": [
     {
-      "name": "add_to_whitelist",
+      "name": "add_shareholder",
       "discriminator": [
-        157,
-        211,
-        52,
-        54,
-        144,
-        81,
-        5,
-        55
+        245,
+        200,
+        91,
+        102,
+        184,
+        107,
+        29,
+        188
       ],
       "accounts": [
         {
-          "name": "new_account"
-        },
-        {
-          "name": "white_list",
+          "name": "new_shareholder_whitelist",
           "writable": true,
           "pda": {
             "seeds": [
@@ -36,25 +33,36 @@
                   105,
                   116,
                   101,
-                  95,
                   108,
                   105,
                   115,
                   116
                 ]
+              },
+              {
+                "kind": "arg",
+                "path": "wallet"
               }
             ]
           }
         },
         {
-          "name": "signer",
+          "name": "authority",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "wallet_account",
+          "name": "wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "token_account",
           "type": "pubkey"
         }
       ]
@@ -119,70 +127,37 @@
         {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "white_list",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  119,
-                  104,
-                  105,
-                  116,
-                  101,
-                  95,
-                  108,
-                  105,
-                  115,
-                  116
-                ]
-              }
-            ]
-          }
         }
       ],
       "args": []
     },
     {
-      "name": "remove_from_whitelist",
+      "name": "remove_shareholder",
       "discriminator": [
-        7,
-        144,
-        216,
-        239,
-        243,
-        236,
+        66,
+        175,
+        86,
+        173,
+        126,
         193,
-        235
+        86,
+        239
       ],
       "accounts": [
         {
-          "name": "account_to_remove",
-          "docs": [
-            "The token account you want to remove",
-            "(and we might also need the wallet key as an arg too)",
-            "/// CHECK: account_to_remove is a token account"
-          ]
-        },
-        {
-          "name": "white_list",
+          "name": "shareholder_whitelist",
           "writable": true
         },
         {
-          "name": "signer",
+          "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "shareholder_whitelist"
+          ]
         }
       ],
-      "args": [
-        {
-          "name": "wallet_account",
-          "type": "pubkey"
-        }
-      ]
+      "args": []
     },
     {
       "name": "transfer_hook",
@@ -243,28 +218,6 @@
               }
             ]
           }
-        },
-        {
-          "name": "white_list",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  119,
-                  104,
-                  105,
-                  116,
-                  101,
-                  95,
-                  108,
-                  105,
-                  115,
-                  116
-                ]
-              }
-            ]
-          }
         }
       ],
       "args": [
@@ -277,16 +230,16 @@
   ],
   "accounts": [
     {
-      "name": "WhiteList",
+      "name": "ShareholderWhitelist",
       "discriminator": [
-        77,
-        38,
-        70,
+        57,
         33,
-        93,
-        150,
-        136,
-        174
+        117,
+        211,
+        219,
+        212,
+        200,
+        153
       ]
     }
   ],
@@ -294,22 +247,12 @@
     {
       "code": 6000,
       "name": "IsNotCurrentlyTransferring",
-      "msg": "The token is not currently transferring"
-    },
-    {
-      "code": 6001,
-      "name": "NotWhitelistAuthority",
-      "msg": "Only the whitelist authority can modify the whitelist"
-    },
-    {
-      "code": 6002,
-      "name": "WalletAlreadyWhitelisted",
-      "msg": "This (token_account, wallet_account) pair is already whitelisted"
+      "msg": "Not currently transferring"
     }
   ],
   "types": [
     {
-      "name": "WhiteList",
+      "name": "ShareholderWhitelist",
       "type": {
         "kind": "struct",
         "fields": [
@@ -318,30 +261,16 @@
             "type": "pubkey"
           },
           {
-            "name": "white_list",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "WhitelistEntry"
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "WhitelistEntry",
-      "type": {
-        "kind": "struct",
-        "fields": [
+            "name": "wallet",
+            "type": "pubkey"
+          },
           {
             "name": "token_account",
             "type": "pubkey"
           },
           {
-            "name": "wallet_account",
-            "type": "pubkey"
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }

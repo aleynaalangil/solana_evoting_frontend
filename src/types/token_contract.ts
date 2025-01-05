@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/token_contract.json`.
  */
 export type TokenContract = {
-  "address": "HYLDMLJVRik77Z3Lcyx4zTehwwJhhpogSVQvGDrhXUBN",
+  "address": "2dae2BYY9kVVDfW4bjprmmrZv6b4PJvudeh4hSJATtS4",
   "metadata": {
     "name": "tokenContract",
     "version": "0.1.0",
@@ -15,6 +15,9 @@ export type TokenContract = {
   "instructions": [
     {
       "name": "addShareholderByCompany",
+      "docs": [
+        "Add a new Shareholder by creating a \"Shareholder\" account (one-PDA-per-shareholder)."
+      ],
       "discriminator": [
         61,
         197,
@@ -33,7 +36,30 @@ export type TokenContract = {
         {
           "name": "shareholder",
           "writable": true,
-          "signer": true
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  104,
+                  97,
+                  114,
+                  101,
+                  104,
+                  111,
+                  108,
+                  100,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "shareholderPk"
+              }
+            ]
+          }
         },
         {
           "name": "payer",
@@ -58,6 +84,10 @@ export type TokenContract = {
     },
     {
       "name": "delegateVoteRights",
+      "docs": [
+        "Delegate vote rights by changing the `owner` on the Shareholder account",
+        "(and maybe adjusting voting_power)."
+      ],
       "discriminator": [
         112,
         73,
@@ -71,12 +101,14 @@ export type TokenContract = {
       "accounts": [
         {
           "name": "company",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "shareholder"
+          ]
         },
         {
           "name": "shareholder",
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "payer",
@@ -105,6 +137,10 @@ export type TokenContract = {
     },
     {
       "name": "finishPoll",
+      "docs": [
+        "Finish the poll. If there's a tie among multiple top options, create a new poll",
+        "containing only those tied options."
+      ],
       "discriminator": [
         78,
         50,
@@ -117,14 +153,31 @@ export type TokenContract = {
       ],
       "accounts": [
         {
-          "name": "poll",
+          "name": "oldPoll",
           "writable": true
+        },
+        {
+          "name": "tieBreakPoll",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
     },
     {
       "name": "initializeCompany",
+      "docs": [
+        "Initialize the Company with name, symbol, total supply, etc."
+      ],
       "discriminator": [
         75,
         156,
@@ -198,6 +251,9 @@ export type TokenContract = {
     },
     {
       "name": "initializePoll",
+      "docs": [
+        "Create a poll with a list of `options`."
+      ],
       "discriminator": [
         193,
         22,
@@ -215,7 +271,7 @@ export type TokenContract = {
           "signer": true
         },
         {
-          "name": "owner",
+          "name": "payer",
           "writable": true,
           "signer": true
         },
@@ -234,16 +290,19 @@ export type TokenContract = {
       ]
     },
     {
-      "name": "removeShareholder",
+      "name": "removeShareholderByCompany",
+      "docs": [
+        "Remove a Shareholder by closing the Shareholder account."
+      ],
       "discriminator": [
-        66,
-        175,
-        86,
-        173,
-        126,
-        193,
-        86,
-        239
+        202,
+        149,
+        2,
+        25,
+        200,
+        153,
+        128,
+        91
       ],
       "accounts": [
         {
@@ -269,27 +328,11 @@ export type TokenContract = {
       "args": []
     },
     {
-      "name": "tallyVotes",
-      "discriminator": [
-        144,
-        82,
-        0,
-        72,
-        160,
-        132,
-        35,
-        121
-      ],
-      "accounts": [
-        {
-          "name": "poll",
-          "writable": true
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "vote",
+      "docs": [
+        "Cast a vote.",
+        "- Each user that votes must create a unique `VoteRecord` to prove they haven't voted yet."
+      ],
       "discriminator": [
         227,
         110,
@@ -306,15 +349,45 @@ export type TokenContract = {
           "writable": true
         },
         {
-          "name": "shareholder",
-          "writable": true
+          "name": "voter",
+          "writable": true,
+          "signer": true
         },
         {
-          "name": "owner",
-          "signer": true,
-          "relations": [
-            "shareholder"
-          ]
+          "name": "voteRecord",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  45,
+                  114,
+                  101,
+                  99,
+                  111,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "poll"
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -323,12 +396,8 @@ export type TokenContract = {
           "type": "u8"
         },
         {
-          "name": "shareholderOwner",
-          "type": "pubkey"
-        },
-        {
-          "name": "shareholderVotingPower",
-          "type": "u128"
+          "name": "votingPower",
+          "type": "u64"
         }
       ]
     }
@@ -372,18 +441,36 @@ export type TokenContract = {
         195,
         3
       ]
+    },
+    {
+      "name": "voteRecord",
+      "discriminator": [
+        112,
+        9,
+        123,
+        165,
+        234,
+        9,
+        157,
+        167
+      ]
     }
   ],
   "errors": [
     {
       "code": 6000,
-      "name": "unauthorized",
-      "msg": "You are not the company authority"
+      "name": "pollAlreadyFinished",
+      "msg": "Poll is already finished"
     },
     {
       "code": 6001,
-      "name": "underflow",
-      "msg": "Shareholder count underflow"
+      "name": "pollOptionNotFound",
+      "msg": "Poll option not found"
+    },
+    {
+      "code": 6002,
+      "name": "overflow",
+      "msg": "Arithmetic overflow"
     }
   ],
   "types": [
@@ -413,10 +500,6 @@ export type TokenContract = {
             "type": "pubkey"
           },
           {
-            "name": "shareholderCount",
-            "type": "u32"
-          },
-          {
             "name": "treasury",
             "type": "pubkey"
           }
@@ -439,12 +522,6 @@ export type TokenContract = {
             }
           },
           {
-            "name": "voters",
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
             "name": "finished",
             "type": "bool"
           }
@@ -457,12 +534,12 @@ export type TokenContract = {
         "kind": "struct",
         "fields": [
           {
-            "name": "label",
-            "type": "string"
-          },
-          {
             "name": "id",
             "type": "u8"
+          },
+          {
+            "name": "label",
+            "type": "string"
           },
           {
             "name": "votes",
@@ -487,6 +564,30 @@ export type TokenContract = {
           {
             "name": "company",
             "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "voteRecord",
+      "docs": [
+        "Each user must create a VoteRecord with seeds = [b\"vote-record\", pollPubkey, userPubkey]",
+        "to ensure they do not vote twice."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "poll",
+            "type": "pubkey"
+          },
+          {
+            "name": "voter",
+            "type": "pubkey"
+          },
+          {
+            "name": "votedOption",
+            "type": "u8"
           }
         ]
       }

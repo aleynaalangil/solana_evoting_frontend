@@ -95,20 +95,19 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/* -------------------------------------------------------------------------- */
-/*                                   Polls                                    */
-/* -------------------------------------------------------------------------- */
+// /* -------------------------------------------------------------------------- */
+// /*                                   Polls                                    */
+// /* -------------------------------------------------------------------------- */
 
 const Polls: FC = () => {
     const wallet = useAnchorWallet();
     const { publicKey, sendTransaction } = useWallet();
+
     const { mintPubkey } = useMintContext();
+
+    // UI states
     const [pollPubkeyInput, setPollPubkeyInput] = useState('');
     const [mintPubkeyInput, setMintPubkeyInput] = useState('');
-
-
-
-    // States
     const [poll, setPoll] = useState<PublicKey | null>(null);
     const [pollOptions, setPollOptions] = useState<string[]>([]);
     const [optionId, setOptionId] = useState('');
@@ -123,33 +122,32 @@ const Polls: FC = () => {
         };
     }, [wallet]);
 
-    /* ---------------------------- Initialize a Poll ---------------------------- */
+    /* -------------------------------------------------------------------------- */
+    /*                           onInitPoll (Create Poll)                          */
+    /* -------------------------------------------------------------------------- */
     const onInitPoll = useCallback(async (selectedOptions: string[]) => {
         if (!anchorWallet) return;
-
         try {
             const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
             const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
+            // This is your "token_contract" program with poll logic
             const tokenProgram = new Program(idl as TokenContract, provider);
 
-            // If you do have to ensure the company or mint, you might call your "ensure" function here:
-            // await ensureOnChainState();
-
-            // Create the poll
+            // Make a poll Keypair
             const pollKeypair = Keypair.generate();
             setPoll(pollKeypair.publicKey);
 
-            const tx = new web3.Transaction();
-            const initializePollInstruction = await tokenProgram.methods
+            // Build TX
+            const tx = new Transaction();
+            const initPollIx = await tokenProgram.methods
                 .initializePoll(selectedOptions)
                 .accounts({
                     poll: pollKeypair.publicKey,
-                    owner: anchorWallet.publicKey,
                 })
-                .signers([pollKeypair])
                 .instruction();
-            tx.add(initializePollInstruction);
+            tx.add(initPollIx);
 
+            // Send TX
             const { blockhash } = await connection.getLatestBlockhash();
             tx.recentBlockhash = blockhash;
             tx.feePayer = anchorWallet.publicKey;
@@ -157,31 +155,150 @@ const Polls: FC = () => {
             const sig = await sendTransaction(tx, connection, {
                 signers: [pollKeypair]
             });
-            console.log('Transaction Signature:', sig);
+            console.log('Poll creation Sig:', sig);
 
             await sleep(3000);
 
+            // Fetch the poll
             const pollAccount = await tokenProgram.account.poll.fetch(pollKeypair.publicKey);
-            const pollOptions = pollAccount.options;
-            setPollOptions(pollOptions);
+            const newPollOptions = pollAccount.options;
+            setPollOptions(newPollOptions.map((o: any) => o.label));
+            console.log("New poll's options:", newPollOptions);
 
-            console.log("Poll Options:", pollOptions);
         } catch (error) {
             console.error('Error creating poll:', error);
         }
     }, [anchorWallet]);
 
-    /* ---------------------------------- Vote ---------------------------------- */
+    /* -------------------------------------------------------------------------- */
+    /*                                 onVote()                                   */
+    /* -------------------------------------------------------------------------- */
+    // const onVote = useCallback(async () => {
+    //     if (!anchorWallet) return;
+    //     if (optionId === '') {
+    //         console.log("Option ID is empty");
+    //         return;
+    //     }
+
+    //     try {
+    //         const pollPublicKey = new PublicKey(pollPubkeyInput);
+    //         setPoll(pollPublicKey);
+    //         const mintPublicKey = new PublicKey(mintPubkeyInput);
+
+    //         const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
+    //         const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
+    //         // same "token_contract" program
+    //         const tokenProgram = new Program(idl as TokenContract, provider);
+
+    //         // Fetch the poll
+    //         const pollFetcher = await tokenProgram.account.poll.fetch(pollPublicKey);
+    //         console.log("Poll:", pollFetcher);
+
+    //         // Check if poll is finished
+    //         if (pollFetcher.finished) {
+    //             console.log("Poll is over.");
+    //             return;
+    //         }
+
+    //         // Find your Shareholder
+    //         const allShareholders = await tokenProgram.account.shareholder.all();
+    //         let shareholderPk: PublicKey | null = null;
+    //         let totalVotes = 0;
+
+    //         for (const sh of allShareholders) {
+    //             if (sh.account.owner.toBase58() === anchorWallet.publicKey.toBase58()) {
+    //                 shareholderPk = sh.publicKey;
+    //             }
+    //             totalVotes += sh.account.votingPower.toNumber();
+    //         }
+    //         if (!shareholderPk) {
+    //             console.error("No shareholder account found for current wallet.");
+    //             return;
+    //         }
+
+    //         // The voting weight is your associated token balance
+    //         const destinationTokenAccount = getAssociatedTokenAddressSync(
+    //             mintPublicKey,
+    //             anchorWallet.publicKey,
+    //             false,
+    //             TOKEN_2022_PROGRAM_ID,
+    //             ASSOCIATED_TOKEN_PROGRAM_ID,
+    //         );
+    //         const votingPowerBalance = await connection.getTokenAccountBalance(destinationTokenAccount);
+
+    //         // Build TX
+    //         const tx = new Transaction();
+    //         const voteIdx = parseInt(optionId, 10);
+    //         if (isNaN(voteIdx)) {
+    //             console.log("Invalid option ID");
+    //             return;
+    //         }
+    //         const voteIx = await tokenProgram.methods
+    //             .vote(voteIdx, new BN(votingPowerBalance.value.uiAmount))
+    //             .accounts({
+    //                 poll: pollPublicKey,
+    //                 voter: shareholderPk,
+    //             })
+    //             .instruction();
+    //         tx.add(voteIx);
+
+    //         // Send TX
+    //         const { blockhash } = await connection.getLatestBlockhash();
+    //         tx.recentBlockhash = blockhash;
+    //         tx.feePayer = anchorWallet.publicKey;
+
+    //         const signedTx = await anchorWallet.signTransaction(tx);
+    //         const sig = await connection.sendRawTransaction(signedTx.serialize());
+    //         console.log("Vote Tx Sig:", sig);
+
+    //         await sleep(2000);
+
+    //         // Optionally check if poll is "complete" (i.e. sum of votes == totalVotes).
+    //         // If so, finish poll & tally
+    //         const updatedPollAccount = await tokenProgram.account.poll.fetch(pollPublicKey);
+    //         let pollSum = 0;
+    //         for (const option of updatedPollAccount.options) {
+    //             pollSum += option.votes.toNumber();
+    //         }
+    //         if (pollSum === totalVotes) {
+    //             console.log("Poll is presumably complete. Finishing poll + tallying...");
+
+    //             // Build TX2
+    //             const tx2 = new Transaction();
+
+    //             // finishPoll
+    //             const tieBreakPoll = new Keypair()
+    //             const finishPollIx = await tokenProgram.methods
+    //                 .finishPoll()
+    //                 .accounts({
+    //                     oldPoll: pollPublicKey,
+    //                     tieBreakPoll: tieBreakPoll.publicKey,
+    //                     payer: anchorWallet.publicKey
+    //                 })
+    //                 .instruction();
+    //             tx2.add(finishPollIx);
+
+    //             const { blockhash: blockhash2 } = await connection.getLatestBlockhash();
+    //             tx2.recentBlockhash = blockhash2;
+    //             tx2.feePayer = anchorWallet.publicKey;
+
+    //             const signedTx2 = await anchorWallet.signTransaction(tx2);
+    //             const sig2 = await connection.sendRawTransaction(signedTx2.serialize());
+    //             console.log("Finish Poll + Tally Sig:", sig2);
+    //         }
+
+    //     } catch (err) {
+    //         console.error("Error voting:", err);
+    //     }
+    // }, [anchorWallet, pollPubkeyInput, mintPubkeyInput, optionId]);
     const onVote = useCallback(async () => {
         if (!anchorWallet) return;
-        // Start of Selection
         if (optionId === '') {
             console.log("Option ID is empty");
             return;
         }
 
         try {
-
             const pollPublicKey = new PublicKey(pollPubkeyInput);
             setPoll(pollPublicKey);
             const mintPublicKey = new PublicKey(mintPubkeyInput);
@@ -190,141 +307,136 @@ const Polls: FC = () => {
             const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
             const tokenProgram = new Program(idl as TokenContract, provider);
 
-            // Possibly ensure mint/company is set here if relevant:
-            // const { companyPda, mintPubkey } = await ensureOnChainState();
-
-            const pollFetcher = await tokenProgram.account.poll.fetch(pollPublicKey);
-            console.log("Poll Account:", pollFetcher);
-            const pollOptionsFetched = pollFetcher.options;
-            setPollOptions(pollOptionsFetched);
-
-            if (pollOptionsFetched.length === 0) {
-                console.log("No poll options available");
-                return;
-            }
+            // 1) Fetch the poll
             const pollAccount = await tokenProgram.account.poll.fetch(pollPublicKey);
+            console.log("Poll:", pollAccount);
+
+            // If poll is finished, abort
             if (pollAccount.finished) {
-                console.log("Poll is over");
+                console.log("Poll is over.");
                 return;
             }
 
-            const shareholders = await tokenProgram.account.shareholder.all();
+            // 2) “Shareholder” logic: (Optional) If you want to ensure the user has a Shareholder, you can do so:
+            const allShareholders = await tokenProgram.account.shareholder.all();
             let shareholderPk: PublicKey | null = null;
-            let shareholdersLength = shareholders.length;
             let totalVotes = 0;
 
-            for (let i = 0; i < shareholdersLength; i++) {
-                if (shareholders[i].account.owner.toBase58() === anchorWallet.publicKey.toBase58()) {
-                    shareholderPk = shareholders[i].publicKey;
+            for (const sh of allShareholders) {
+                // If the current wallet is the "owner" of that shareholder
+                if (sh.account.owner.toBase58() === anchorWallet.publicKey.toBase58()) {
+                    shareholderPk = sh.publicKey;
                 }
-                totalVotes += shareholders[i].account.votingPower.toNumber();
+                totalVotes += sh.account.votingPower.toNumber();
             }
-            console.log("Total Votes:", totalVotes);
             if (!shareholderPk) {
-                console.error("No shareholder account found for the current wallet.");
+                console.error("No shareholder account found for current wallet.");
                 return;
             }
 
+            // 3) Derive a "vote-record" PDA to ensure you cannot vote twice
+            const [voteRecordPda] = PublicKey.findProgramAddressSync(
+                [
+                    Buffer.from("vote-record"),
+                    pollPublicKey.toBuffer(),
+                    anchorWallet.publicKey.toBuffer()
+                ],
+                tokenProgram.programId
+            );
+
+            // 4) Calculate user’s "votingPower" from their associated token balance
             const destinationTokenAccount = getAssociatedTokenAddressSync(
                 mintPublicKey,
                 anchorWallet.publicKey,
                 false,
                 TOKEN_2022_PROGRAM_ID,
-                ASSOCIATED_TOKEN_PROGRAM_ID,
+                ASSOCIATED_TOKEN_PROGRAM_ID
             );
-            const shareholderVotingPower = await connection.getTokenAccountBalance(destinationTokenAccount);
+            const balanceInfo = await connection.getTokenAccountBalance(destinationTokenAccount);
+            const rawUiAmount = balanceInfo.value.uiAmount ?? 0;
+            console.log("VotingPower from token account:", rawUiAmount);
 
-            // Create transaction
-            const tx = new web3.Transaction();
+            // 5) Build transaction
+            const tx = new Transaction();
             const voteIdx = parseInt(optionId, 10);
             if (isNaN(voteIdx)) {
                 console.log("Invalid option ID");
                 return;
             }
-            const voteInstruction = await tokenProgram.methods
-                .vote(new BN(voteIdx), anchorWallet.publicKey, new BN(shareholderVotingPower.value.uiAmount))
+
+            // In the contract, the method signature is: vote(ctx, vote_id, voting_power)
+            // voting_power is a u64 -> BN in JS
+            const voteIx = await tokenProgram.methods
+                .vote(voteIdx, new BN(rawUiAmount))  // pass the user’s voting power here
                 .accounts({
                     poll: pollPublicKey,
-                    shareholder: shareholderPk,
+                    voter: anchorWallet.publicKey,   // the signer's wallet
+                    // voteRecord: voteRecordPda,       // the new PDA that ensures 1 vote max
                 })
                 .instruction();
-            tx.add(voteInstruction);
+            tx.add(voteIx);
 
+            // 6) Send transaction
             const { blockhash } = await connection.getLatestBlockhash();
             tx.recentBlockhash = blockhash;
             tx.feePayer = anchorWallet.publicKey;
 
             const signedTx = await anchorWallet.signTransaction(tx);
             const sig = await connection.sendRawTransaction(signedTx.serialize());
-            console.log('Transaction Signature:', sig);
+            console.log("Vote Tx Sig:", sig);
 
+            // 7) (Optional) Wait, then check if all votes are cast => finish poll
             await sleep(2000);
-
-            const pollAccountForFinishCheck = await tokenProgram.account.poll.fetch(pollPublicKey);
-            let pollVotes = 0;
-            let winnerOption = "";
-
-            for (let i = 0; i < pollAccountForFinishCheck.options.length; i++) {
-                pollVotes += pollAccountForFinishCheck.options[i].votes.toNumber();
-
+            const updatedPollAccount = await tokenProgram.account.poll.fetch(pollPublicKey);
+            let pollSum = 0;
+            for (const option of updatedPollAccount.options) {
+                pollSum += option.votes.toNumber();
             }
-            console.log("Poll Votes:", pollVotes);
-            console.log("Total Votes after the poll votes:", totalVotes);
-            // let maxVotes = 0;
-            // for (let i = 0; i < pollAccountForFinishCheck.options.length; i++) {
-            //     if (pollAccountForFinishCheck.options[i].votes.toNumber() > maxVotes) {
-            //         maxVotes = pollAccountForFinishCheck.options[i].votes.toNumber();
-            //         winnerOption = pollAccountForFinishCheck.options[i].label;
-            //     }
-            // }
-            console.log("Winner Option: " + winnerOption);
-            if (pollVotes === totalVotes) {
-                console.log("Poll is over");
-                let maxVotes = 0;
-                for (let i = 0; i < pollAccountForFinishCheck.options.length; i++) {
-                    if (pollAccountForFinishCheck.options[i].votes.toNumber() > maxVotes) {
-                        maxVotes = pollAccountForFinishCheck.options[i].votes.toNumber();
-                        winnerOption = pollAccountForFinishCheck.options[i].label;
-                        console.log("Winner Option: " + winnerOption + " with " + maxVotes + " votes in the client side");
-                    }
-                }
-                const tx2 = new web3.Transaction();
-                const finishPollInstruction = await tokenProgram.methods
+
+            if (pollSum === totalVotes) {
+                console.log("Poll is presumably complete. Now finishing poll...");
+                const tx2 = new Transaction();
+                const tieBreakPollKeypair = Keypair.generate();
+
+                // The contract’s `finishPoll` expects “oldPoll” and “tieBreakPoll”, plus the payer
+                // Also ensures "tie_break_poll" is created (init).
+                const finishPollIx = await tokenProgram.methods
                     .finishPoll()
                     .accounts({
-                        poll: pollPublicKey,
+                        oldPoll: pollPublicKey,
+                        tieBreakPoll: tieBreakPollKeypair.publicKey,
+                        payer: anchorWallet.publicKey,
                     })
+                    .signers([tieBreakPollKeypair])  // Because we are creating a new poll account
                     .instruction();
-                tx2.add(finishPollInstruction);
+                tx2.add(finishPollIx);
 
-                const voteTallyTX = await tokenProgram.methods
-                    .tallyVotes()
-                    .accounts({
-                        poll: pollPublicKey,
-                    })
-                    .instruction();
-                tx2.add(voteTallyTX);
-
+                // Prepare the transaction
                 const { blockhash: blockhash2 } = await connection.getLatestBlockhash();
                 tx2.recentBlockhash = blockhash2;
                 tx2.feePayer = anchorWallet.publicKey;
-                const pollFinishedTX = await anchorWallet.signTransaction(tx2);
-                const pollFinishedSig = await connection.sendRawTransaction(pollFinishedTX.serialize());
-                console.log("Poll Finished Sig:", pollFinishedSig);
-                return;
+
+                // Must sign for the new poll account creation
+                const signedTx2 = await anchorWallet.signTransaction(tx2);
+                signedTx2.partialSign(tieBreakPollKeypair);
+                // pass the new poll keypair as well
+                const sig2 = await connection.sendRawTransaction(signedTx2.serialize());
+                console.log("Finish Poll + Tally Sig:", sig2);
             }
 
-        } catch (error) {
-            console.error('Error voting:', error);
+        } catch (err) {
+            console.error("Error voting:", err);
         }
-    }, [anchorWallet, poll, optionId, pollOptions]);
+    }, [anchorWallet, pollPubkeyInput, mintPubkeyInput, optionId]);
 
-    /* ------------------------------- UI Render ------------------------------- */
+    /* -------------------------------------------------------------------------- */
+    /*                                UI Render                                   */
+    /* -------------------------------------------------------------------------- */
     return (
         <div className="page">
             <h1>Polls</h1>
             <div className="card">
-                <h2 className='card-title'>Create Poll</h2>
+                <h2 className="card-title">Create Poll</h2>
                 <input
                     type="text"
                     placeholder="Enter poll options (Option1, Option2, ...)"
@@ -337,8 +449,9 @@ const Polls: FC = () => {
                     Initialize Poll
                 </button>
             </div>
+
             <div className="card">
-                <h2 className='card-title'>Vote</h2>
+                <h2 className="card-title">Vote</h2>
                 <input
                     type="text"
                     placeholder="Poll Account Address"
@@ -357,7 +470,6 @@ const Polls: FC = () => {
                     value={optionId}
                     onChange={(e) => setOptionId(e.target.value)}
                 />
-
                 <button
                     onClick={onVote}
                     disabled={!wallet?.publicKey || optionId === '' || !pollPubkeyInput || !mintPubkeyInput}
@@ -365,7 +477,6 @@ const Polls: FC = () => {
                     Submit Vote
                 </button>
             </div>
-
         </div>
     );
 };
@@ -445,18 +556,15 @@ const Company: FC = () => {
             mintPubkey: finalMintPubkey,
         };
     }, [anchorWallet, companyAccount, mint]);
-    /* ---------------------------------------------------------------------- */
-    /* onInitializeCompany - Create a new company if it doesn't exist already */
-    /* ---------------------------------------------------------------------- */
+    /* -------------------------------------------------------------------------- */
+    /*                    onInitializeCompany (create everything)                 */
+    /* -------------------------------------------------------------------------- */
     const onInitializeCompany = useCallback(async () => {
         if (!anchorWallet) return;
-
-        // 1) Ensure we haven't already got a company or minted token on chain
         await ensureOnChainState();
 
-        // 2) If we STILL don't have a company or mint, create them
         if (companyAccount && mint) {
-            console.log("Company or Mint is already set, skipping creation.");
+            console.log("Company or Mint already set, skipping creation");
             return;
         }
 
@@ -466,19 +574,19 @@ const Company: FC = () => {
             const tokenProgram = new Program(idl as TokenContract, provider);
             const transferHookProgram = new Program(idl2 as TransferHook, provider);
 
-            // Derive company PDA
+            // Derive company
             const [companyPda] = PublicKey.findProgramAddressSync(
                 [Buffer.from('company'), anchorWallet.publicKey.toBytes()],
                 tokenProgram.programId
             );
             setCompanyAccount(companyPda);
 
-            // Create a brand new Keypair for the mint
+            // Create a brand new mint
             const mintKeypair = Keypair.generate();
             setMint(mintKeypair);
 
-            // Derive treasury ATA
-            const treasuryPda = await getAssociatedTokenAddressSync(
+            // Treasury ATA
+            const treasuryPda = getAssociatedTokenAddressSync(
                 mintKeypair.publicKey,
                 anchorWallet.publicKey,
                 false,
@@ -487,18 +595,17 @@ const Company: FC = () => {
             );
             setTreasury(treasuryPda);
 
-            // Prepare the instructions for initializing the mint (with Transfer Hook, etc.)
+            const bnTotalSupply = BigInt(totalSupply || "0") * BigInt(Math.pow(10, 9));
+            if (bnTotalSupply === BigInt(0)) {
+                alert("Invalid total supply.");
+                return;
+            }
+
+            // 1) Create the Mint
             const extensions = [ExtensionType.TransferHook, ExtensionType.MetadataPointer, ExtensionType.PermanentDelegate];
             const mintLen = getMintLen(extensions);
             const lamports = await connection.getMinimumBalanceForRentExemption(mintLen);
 
-            const bnTotalSupply = BigInt(totalSupply || "0") * BigInt(Math.pow(10, 9));
-            if (bnTotalSupply === BigInt(0)) {
-                console.log("Total supply is 0 or invalid.");
-                return;
-            }
-
-            // 1) Create the Mint account
             const createMintTx = new Transaction().add(
                 SystemProgram.createAccount({
                     fromPubkey: anchorWallet.publicKey,
@@ -507,24 +614,24 @@ const Company: FC = () => {
                     lamports,
                     programId: TOKEN_2022_PROGRAM_ID,
                 }),
+                // optional extra, depends on your version
                 SystemProgram.transfer({
                     fromPubkey: anchorWallet.publicKey,
                     toPubkey: mintKeypair.publicKey,
-                    lamports: lamports
+                    lamports,
                 })
             );
-            // sign & send
-            const createSig = await sendTransaction(createMintTx, connection, { signers: [mintKeypair] });
-            console.log("Create Mint Tx Sig:", createSig);
+            const createMintSig = await sendTransaction(createMintTx, connection, { signers: [mintKeypair] });
+            console.log("Create Mint Sig:", createMintSig);
             await sleep(4000);
 
-            // 2) Initialize instructions in a second transaction
+            // 2) Initialize instructions
             const initTx = new Transaction().add(
                 createInitializeTransferHookInstruction(
                     mintKeypair.publicKey,
                     anchorWallet.publicKey,
                     transferHookProgram.programId,
-                    TOKEN_2022_PROGRAM_ID,
+                    TOKEN_2022_PROGRAM_ID
                 ),
                 createInitializeMetadataPointerInstruction(
                     mintKeypair.publicKey,
@@ -556,17 +663,21 @@ const Company: FC = () => {
                 })
             );
             await sleep(3000);
-
-            // Add "initializeExtraAccountMetaList" from Transfer Hook
+            // const extraMetaListPda = PublicKey.findProgramAddressSync(
+            //     [Buffer.from("extra-account-meta-list"), anchorWallet.publicKey.toBytes()],
+            //     transferHookProgram.programId
+            // );
+            // // Also call `initializeExtraAccountMetaList` on the transferHook program
             const extraMetaIx = await transferHookProgram.methods
                 .initializeExtraAccountMetaList()
                 .accounts({
-                    mint: mintKeypair.publicKey,
+                    payer: anchorWallet.publicKey,
+                    mint: mintKeypair.publicKey, // Not an actual real mint, just a placeholder
                 })
                 .instruction();
             initTx.add(extraMetaIx);
 
-            // Add "initializeCompany" from your Token Program
+            // Also "initializeCompany" in your tokenContract
             const createCompanyIx = await tokenProgram.methods
                 .initializeCompany(
                     nftName,
@@ -585,14 +696,14 @@ const Company: FC = () => {
                 .instruction();
             initTx.add(createCompanyIx);
 
-            // sign & send
             let { blockhash } = await connection.getLatestBlockhash();
             initTx.recentBlockhash = blockhash;
             initTx.feePayer = anchorWallet.publicKey;
 
             const signedTx = await anchorWallet.signTransaction(initTx);
-            const initSig2 = await connection.sendRawTransaction(signedTx.serialize());
-            console.log("Init Tx Sig:", initSig2);
+            const initSig = await connection.sendRawTransaction(signedTx.serialize());
+            console.log("Init Tx Sig:", initSig);
+            await sleep(3000);
 
             // 3) Create treasury ATA + Mint tokens
             const finalTx = new Transaction().add(
@@ -624,24 +735,21 @@ const Company: FC = () => {
         } catch (err) {
             console.error("Error creating company:", err);
         }
-    }, [
-        anchorWallet,
-        nftName,
-        nftDescription,
-        totalSupply,
-        companyAccount,
-        mint,
-        ensureOnChainState
-    ]);
+    }, [anchorWallet, nftName, nftDescription, totalSupply, ensureOnChainState]);
 
-    /* -------------------------- onWhitelistShareholder ------------------------- */
+    /* -------------------------------------------------------------------------- */
+    /*                         onWhitelistShareholder()                           */
+    /* -------------------------------------------------------------------------- */
     const onWhitelistShareholder = useCallback(async () => {
         if (!anchorWallet) return;
 
-        // 1) Ensure we have a mint / company before proceeding
         const { companyPda, mintPubkey } = await ensureOnChainState();
         if (!mintPubkey || !companyPda) {
-            console.log("Mint or company not found, aborting whitelist call.");
+            console.log("Mint or company not found. Aborting.");
+            return;
+        }
+        if (!shareholder) {
+            alert("No shareholder address provided.");
             return;
         }
 
@@ -649,48 +757,34 @@ const Company: FC = () => {
             const connection = new Connection("https://api.devnet.solana.com", 'confirmed');
             const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
             const transferHookProgram = new Program(idl2 as TransferHook, provider);
-            const tokenProgram = new Program(idl as TokenContract, provider);
 
-            // Prepare the ATA for the shareholder
-            if (!shareholder) {
-                console.log("No shareholder address provided.");
-                return;
-            }
-
+            // 1) Derive the 'shareholder' ATA
             const destinationTokenAccount = getAssociatedTokenAddressSync(
                 mintPubkey,
                 shareholder,
                 false,
                 TOKEN_2022_PROGRAM_ID,
-                ASSOCIATED_TOKEN_PROGRAM_ID,
+                ASSOCIATED_TOKEN_PROGRAM_ID
             );
-            console.log("Destination Token Account:", destinationTokenAccount.toBase58());
+            // console.log("Shareholder ATA:", destinationTokenAccount.toBase58());
 
-            const fetchedWhitelisted = await transferHookProgram.account.whiteList.all();
+            // 2) Check if seeds-based whitelist entry `[b"whitelist", ATA, anchorWallet]` already exists
+            // Suppose you’re adding a new shareholder with (wallet = newWallet, tokenAccount = newTokenAccount)
+            const allShareholders = await transferHookProgram.account.shareholderWhitelist.all();
+            // const allShareholders = await transferHookProgram.account.shareholderPda.all();
 
-            for (let i = 0; i < fetchedWhitelisted.length; i++) {
-                // 'fetchedWhitelisted[i].account.whiteList' is an array of WhitelistEntry
-                const entries = fetchedWhitelisted[i].account.whiteList;
-
-                for (let j = 0; j < entries.length; j++) {
-                    const entry = entries[j];
-                    console.log("Wallet:", entry.walletAccount.toBase58());
-                    console.log("Token:", entry.tokenAccount.toBase58());
-
-                    if (
-                        entry.walletAccount.toBase58() === shareholder.toBase58() ||
-                        entry.tokenAccount.toBase58() === destinationTokenAccount.toBase58()
-                    ) {
-                        alert("Shareholder or token account already whitelisted");
-                        return;
-                    }
+            // // Check if there’s already a match
+            for (const sh of allShareholders) {
+                if (
+                    sh.account.wallet.toBase58() === shareholder.toBase58() &&
+                    sh.account.tokenAccount.toBase58() === destinationTokenAccount.toBase58()
+                ) {
+                    alert("That shareholder is already whitelisted!");
+                    return;
                 }
             }
 
-
-            setShareholderDestinationTokenAccount(destinationTokenAccount);
-
-            // Create transaction for the ATA
+            // 3) Create ATA if needed
             const txAta = new Transaction().add(
                 createAssociatedTokenAccountInstruction(
                     anchorWallet.publicKey,
@@ -698,45 +792,44 @@ const Company: FC = () => {
                     shareholder,
                     mintPubkey,
                     TOKEN_2022_PROGRAM_ID,
-                    ASSOCIATED_TOKEN_PROGRAM_ID,
+                    ASSOCIATED_TOKEN_PROGRAM_ID
                 )
             );
-            let { blockhash: blockhashAta } = await connection.getLatestBlockhash();
-            txAta.recentBlockhash = blockhashAta;
-            txAta.feePayer = anchorWallet.publicKey;
-
-            const signedTxAta = await anchorWallet.signTransaction(txAta);
-            const sigAta = await connection.sendRawTransaction(signedTxAta.serialize());
-            console.log("ATA creation sig:", sigAta);
-
-            // Add to whitelist
-            const txWhitelist = new Transaction();
-            const addAccountToWhiteListIx = await transferHookProgram.methods
-                .addToWhitelist(shareholder)
-                .accounts({
-                    newAccount: destinationTokenAccount,
-                    signer: anchorWallet.publicKey,
-                })
-                .instruction();
-            txWhitelist.add(addAccountToWhiteListIx);
 
             let { blockhash } = await connection.getLatestBlockhash();
-            txWhitelist.recentBlockhash = blockhash;
-            txWhitelist.feePayer = anchorWallet.publicKey;
+            txAta.recentBlockhash = blockhash;
+            txAta.feePayer = anchorWallet.publicKey;
 
-            const signedTx = await anchorWallet.signTransaction(txWhitelist);
-            const sig = await connection.sendRawTransaction(signedTx.serialize());
-            console.log('Add to Whitelist Sig:', sig);
+            const signedAtaTx = await anchorWallet.signTransaction(txAta);
+            const ataSig = await connection.sendRawTransaction(signedAtaTx.serialize());
+            console.log("Created Shareholder ATA Sig:", ataSig);
+            await sleep(2000);
+
+            // 4) Actually whitelist via `addWhitelistEntry(ATA, anchorWallet)`
+            const tx = new Transaction();
+            const addIx = await transferHookProgram.methods
+                .addShareholder(shareholder, destinationTokenAccount)
+                .accounts({
+                    authority: anchorWallet.publicKey,
+                })
+                .instruction();
+            tx.add(addIx);
+
+            // 4) Send the transaction, including the new Keypair as a signer
+            const { blockhash: blockhash2 } = await connection.getLatestBlockhash();
+            tx.recentBlockhash = blockhash2;
+            tx.feePayer = anchorWallet.publicKey;
+
+            const sig = await sendTransaction(tx, connection, { signers: [] });
+            console.log("Whitelisted (ATA, anchorWallet) with signature:", sig);
 
         } catch (err) {
             console.error("Error whitelisting shareholder:", err);
         }
-    }, [anchorWallet, companyAccount, mint, shareholder, ensureOnChainState]);
+    }, [anchorWallet, ensureOnChainState, shareholder]);
 
     const onUnwhitelistShareholder = useCallback(async () => {
         if (!anchorWallet) return;
-
-        // 1) Ensure we have a mint / company
         const { companyPda, mintPubkey } = await ensureOnChainState();
         if (!mintPubkey || !companyPda) {
             console.log("Mint or company not found, aborting unwhitelist call.");
@@ -748,142 +841,103 @@ const Company: FC = () => {
             const provider = new AnchorProvider(connection, anchorWallet, AnchorProvider.defaultOptions());
             const transferHookProgram = new Program(idl2 as TransferHook, provider);
             const tokenProgram = new Program(idl as TokenContract, provider);
-            const whitelistPda = new PublicKey("DoQsUaCe1H9SdqMnw3w44FveyHF3MJg6g7dS5qr3sVHj");
 
             if (!shareholder) {
-                console.log("No shareholder address provided.");
+                alert("No shareholder address provided.");
                 return;
             }
 
-            // 2) Fetch the entire whitelist array
-            const fetchedWhitelisted = await transferHookProgram.account.whiteList.all();
-            const fetchedShareholders = await tokenProgram.account.shareholder.all();
-            let shareholderPda: PublicKey | null = null;
-            let shareholderVotingPower: string | null = null;
+            // find which WhiteList account (if any) references that `(tokenAccount, wallet)`
+            const fetchedWhitelisted = await transferHookProgram.account.shareholderWhitelist.all();
+            // const fetchedWhitelisted = await transferHookProgram.account.shareholderPda.all();
 
-            for (let i = 0; i < fetchedShareholders.length; i++) {
-                const sh = fetchedShareholders[i];
-                if (sh.account.owner.toBase58() === shareholder.toBase58()) {
-                    // We found the Shareholder account that belongs to this wallet
-                    shareholderPda = sh.publicKey;
-                    shareholderVotingPower = sh.account.votingPower.toString();
-                    break;
-                }
-            }
-            const company = await tokenProgram.account.company.all();
-            const lent = company[0].account.shareholderCount;
-            console.log("Company:", company);
-            console.log("Shareholder Count:", lent);
-
-            console.log("Shareholder PDA:", shareholderPda?.toBase58());
-            console.log("Shareholder Voting Power:", shareholderVotingPower);
-
-            // If we never found a match
-            if ( !shareholderPda || !shareholderVotingPower) {
-                alert("Shareholder not found in the program accounts.");
-                return;
-            }
-
-            // If the voting power is zero
-            if (shareholderVotingPower === '0') {
-                alert("Shareholder voting power is 0. Can't proceed.");
-                return;
-            }
-
-            // At this point, you have a valid 'shareholderPda' with nonzero voting power.
-            // You can do the rest of your logic here.
-
-
-            // We need to find the actual WhiteList PDA, not just the authority
-            // Typically, `fetchedWhitelisted[i].publicKey` is the PDA for that WhiteList account
-            // We will search them all to see which one might contain the shareholder
-            let foundPda: PublicKey | null = null;
-            let destinationTokenAccount: PublicKey | null = null;
+            let matchedTokenAccount: PublicKey | null = null;
+            let matchedWhiteListPda: PublicKey | null = null;
 
             outerLoop:
-            for (let i = 0; i < fetchedWhitelisted.length; i++) {
-                const wlPda = fetchedWhitelisted[i].publicKey; // The actual account's public key
-                const entries = fetchedWhitelisted[i].account.whiteList;
-
-                for (let j = 0; j < entries.length; j++) {
-                    const entry = entries[j];
-                    const wallet = entry.walletAccount.toBase58();
-                    const token = entry.tokenAccount.toBase58();
-
-                    // If this entry matches the user’s shareHolder
-                    if (wallet === shareholder.toBase58()) {
-                        foundPda = wlPda;
-                        destinationTokenAccount = entry.tokenAccount;
-                        console.log("Found matching shareholder in whitelist PDA:", wlPda.toBase58());
-                        console.log("Token account:", token);
-                        break outerLoop; // Stop searching; we found it
-                    }
+            for (const wl of fetchedWhitelisted) {
+                // Each wl.account is a single WhitelistEntryPda
+                if (wl.account.wallet.toBase58() === shareholder.toBase58()) {
+                    matchedTokenAccount = wl.account.tokenAccount;
+                    matchedWhiteListPda = wl.publicKey;
+                    break outerLoop;
                 }
             }
 
-            if (!foundPda || !destinationTokenAccount) {
-                // We never found an entry that matches the user’s shareholder
-                alert("Shareholder is not whitelisted");
+            if (!matchedTokenAccount || !matchedWhiteListPda) {
+                alert("Shareholder is not in the whitelist array. Aborting.");
                 return;
             }
 
-            // 3) Build the removeFromWhitelist instruction
+            // console.log("matchedTokenAccount:", matchedTokenAccount.toBase58());
+            // console.log("matchedWhiteListPda:", matchedWhiteListPda.toBase58());
+
+            if (!matchedTokenAccount || !matchedWhiteListPda) {
+                alert("Shareholder is not in the whitelist array. Aborting.");
+                return;
+            }
+
+            // 1) removeFromWhitelist
             const tx = new Transaction();
-            const removeShareholderIxTransferHook = await transferHookProgram.methods
-                .removeFromWhitelist(shareholder) // The wallet to remove
+            const removeIx = await transferHookProgram.methods
+                .removeShareholder()  
                 .accounts({
-                    // @ts-ignore
-                    accountToRemove: destinationTokenAccount, // The token to remove
-                    whiteList: foundPda,
-                    signer: anchorWallet.publicKey,
+                    shareholderWhitelist: matchedWhiteListPda
                 })
                 .instruction();
-            tx.add(removeShareholderIxTransferHook);
+            tx.add(removeIx);
 
             let { blockhash } = await connection.getLatestBlockhash();
             tx.recentBlockhash = blockhash;
             tx.feePayer = anchorWallet.publicKey;
-
             const signedTx = await anchorWallet.signTransaction(tx);
             const sig = await connection.sendRawTransaction(signedTx.serialize());
-            console.log('Remove Shareholder Sig:', sig);
+            console.log("Remove from Whitelist Sig:", sig);
 
-            const tx2 = new Transaction();
-            const removeShareholderIxTokenContract = await tokenProgram.methods
-                .removeShareholder()
+            // 2) removeShareholder from `token_contract` if you want to remove them from the Company
+            // (Of course, you only do this if you want to fully remove them as a shareholder)
+            const allShareholders = await tokenProgram.account.shareholder.all();
+            const foundShareholderAcc = allShareholders.find(
+                (acc) => acc.account.owner.toBase58() === shareholder.toBase58()
+            );
+            if (!foundShareholderAcc) {
+                alert("Shareholder account not found in token_contract. Possibly already removed?");
+                return;
+            }
+
+            const removeShTx = new Transaction();
+            const removeShareholderIx = await tokenProgram.methods
+                .removeShareholderByCompany()
                 .accounts({
-                    // @ts-ignore
-                    company: companyPda,
-                    // @ts-ignore
-                    shareholder: shareholderPda,
-                    authority: anchorWallet.publicKey, // must match company.authority
+                    shareholder: foundShareholderAcc.publicKey,
                 })
                 .instruction();
+            removeShTx.add(removeShareholderIx);
 
-            tx2.add(removeShareholderIxTokenContract);
-
-            // 4) Send transaction
             let { blockhash: blockhash2 } = await connection.getLatestBlockhash();
-            tx2.recentBlockhash = blockhash2;
-            tx2.feePayer = anchorWallet.publicKey;
+            removeShTx.recentBlockhash = blockhash2;
+            removeShTx.feePayer = anchorWallet.publicKey;
 
-            const signedTx2 = await anchorWallet.signTransaction(tx2);
-            const sig2 = await connection.sendRawTransaction(signedTx2.serialize());
-            console.log('Remove Shareholder Sig:', sig2);
+            const signedRemoveShTx = await anchorWallet.signTransaction(removeShTx);
+            const sig2 = await connection.sendRawTransaction(signedRemoveShTx.serialize());
+            console.log("Remove Shareholder Sig:", sig2);
 
         } catch (err) {
             console.error("Error unwhitelisting shareholder:", err);
         }
-    }, [anchorWallet, companyAccount, mint, shareholder, ensureOnChainState]);
+    }, [anchorWallet, ensureOnChainState, shareholder]);
 
 
     /* --------------------- onInitializeShareholderByCompany -------------------- */
     const onInitializeShareholderByCompany = useCallback(async () => {
         if (!anchorWallet) return;
-        // 1) Ensure we have a mint / company
         const { companyPda, mintPubkey } = await ensureOnChainState();
         if (!mintPubkey || !companyPda) {
             console.log("Mint or company not found, aborting init shareholder call.");
+            return;
+        }
+        if (!shareholder || shareholderVotingPower === '') {
+            alert("Shareholder or voting power missing.");
             return;
         }
 
@@ -893,124 +947,103 @@ const Company: FC = () => {
             const tokenProgram = new Program(idl as TokenContract, provider);
             const transferHookProgram = new Program(idl2 as TransferHook, provider);
 
-            if (!shareholder || shareholderVotingPower === '') {
-                console.log("Shareholder or voting power missing.");
-                return;
-            }
-            const fetchedShareholders = await tokenProgram.account.shareholder.all();
-            const shareholdersLength = fetchedShareholders.length;
-
-            for (let i = 0; i < shareholdersLength; i++) {
-                if (fetchedShareholders[i].account.owner.toBase58() === shareholder.toBase58()) {
-                    alert("Shareholder already exists");
-                    return;
-                }
-            }
-
-            // 1) Create a new keypair for the shareholder
-            const newShareholderAccount = Keypair.generate(); // Shareholder acc data assigned in this keypair 
-            console.log("New Shareholder PDA:", newShareholderAccount.publicKey.toBase58());
-
-            // // 2) Add shareholder by company
+            // 1) Create new Shareholder in token_contract
             const tx = new Transaction();
             const votingPowerBn = new BN(shareholderVotingPower);
             if (votingPowerBn.isZero()) {
-                console.log("Voting power is 0");
+                alert("Voting power is zero");
                 return;
             }
 
-            const initializeShareholderIx = await tokenProgram.methods
+            const addShareholderIx = await tokenProgram.methods
                 .addShareholderByCompany(shareholder, votingPowerBn)
                 .accounts({
                     company: companyPda,
-                    shareholder: newShareholderAccount.publicKey,
-                    payer: anchorWallet.publicKey,
+                    payer: anchorWallet.publicKey
                 })
                 .instruction();
-            tx.add(initializeShareholderIx);
+            tx.add(addShareholderIx);
 
-            const sig = await sendTransaction(tx, connection, {
-                signers: [newShareholderAccount],
-            });
+            const sig = await sendTransaction(tx, connection, { signers: [] });
             console.log("Add Shareholder Tx Sig:", sig);
-            let shareholderDestinationATA: PublicKey;
-            const whitelist = await transferHookProgram.account.whiteList.all();
-            for (let i = 0; i < whitelist.length; i++) {
-                const entries = whitelist[i].account.whiteList;
-                for (let j = 0; j < entries.length; j++) {
-                    const entry = entries[j];
-                    console.log("Wallet:", entry.walletAccount.toBase58());
-                    console.log("Token:", entry.tokenAccount.toBase58());
-                    if (entry.walletAccount.toBase58() === shareholder.toBase58()) {
-                        shareholderDestinationATA = entry.tokenAccount;
-                        console.log("Shareholder is whitelisted");
-                        if (!shareholderDestinationATA) {
-                            alert("Shareholder is not whitelisted");
-                            return;
-                        }
-                    }
+            await sleep(2000);
+
+
+            // 2) We now want to Transfer tokens from treasury => shareholder's ATA
+            // => That requires a whitelist entry (ATA, anchorWallet).
+            // Check if we have it:
+            const allEntries = await transferHookProgram.account.shareholderWhitelist.all();
+            // console.log("allEntries:", allEntries);
+            let matchedEntry: { tokenAccount: PublicKey, walletAccount: PublicKey } | null = null;
+
+            for (const wl of allEntries) {
+                // console.log("wl.account.wallet:", wl.account.wallet.toBase58());
+                // console.log("wl.account.tokenAccount:", wl.account.tokenAccount.toBase58());
+                // console.log("wl.publicKey:", wl.publicKey.toBase58());
+                if (
+                    wl.account.wallet.toBase58() === shareholder.toBase58()
+                ) {
+                    // console.log("Found matched entry:", wl.account.wallet.toBase58());
+                    matchedEntry = {
+                        tokenAccount: wl.account.tokenAccount,
+                        walletAccount: wl.account.wallet
+                    };
+                    break;
                 }
             }
-
-            // 3) Transfer tokens from treasury to the new shareholder's ATA
-            const votingPowerAsLamports = new BN(votingPowerBn.mul(new BN(10 ** 9))); // e.g. 1 = 1 * 1e9
-            if (votingPowerAsLamports.isZero()) {
-                console.log("Voting power is 0 after scaling.");
+            if (!matchedEntry) {
+                alert("We did not find an entry where (walletAccount=anchorWallet). Are you sure you whitelisted (ATA, anchorWallet)?");
                 return;
             }
-            console.log("Voting Power As Lamports:", votingPowerAsLamports.toString());
-            //@ts-ignore
-            console.log("Shareholder Destination Token Account:", shareholderDestinationATA?.toBase58());
-            console.log("Mint:", mintPubkey.toBase58());
-            console.log("Anchor Wallet:", anchorWallet.publicKey.toBase58());
-            console.log("Shareholder:", shareholder?.toBase58());
+            // console.log("matchedEntry:", matchedEntry);
+            const shareholderAta = matchedEntry.tokenAccount;
+            // console.log("shareholderAta found:", shareholderAta.toBase58());
 
-            const treasuryPublicKey = await getAssociatedTokenAddress(
-                mintPubkey,         // Mint's public key
-                anchorWallet.publicKey, // Owner of the account
-                false,                  // AllowOffCurve (usually false for ATA)
-                TOKEN_2022_PROGRAM_ID,   // SPL Token program (2022)
+            // 3) Convert votingPower => lamports
+            const votingPowerAsLamports = votingPowerBn.mul(new BN(10 ** 9));
+            if (votingPowerAsLamports.isZero()) {
+                alert("Voting power is 0 after scaling.");
+                return;
+            }
+
+            // 4) Our treasury ATA
+            const treasuryPda = getAssociatedTokenAddressSync(
+                mintPubkey,
+                anchorWallet.publicKey,
+                false,
+                TOKEN_2022_PROGRAM_ID,
                 ASSOCIATED_TOKEN_PROGRAM_ID
             );
-            console.log("Treasury Public Key:", treasuryPublicKey.toBase58());
-            console.log("lampo:", votingPowerAsLamports.toString());
+
+            // 5) Transfer with a "transfer hook" instruction
             const tx2 = new Transaction();
-            const transferHookIx = await createTransferCheckedWithTransferHookInstruction(
+            const hookIx = await createTransferCheckedWithTransferHookInstruction(
                 connection,
-                treasuryPublicKey,
+                treasuryPda,
                 mintPubkey,
-                //@ts-ignore
-                shareholderDestinationATA as PublicKey,
-                anchorWallet.publicKey,
+                shareholderAta,
+                anchorWallet.publicKey, // the source authority
                 votingPowerAsLamports,
                 9,
                 [],
                 'confirmed',
                 TOKEN_2022_PROGRAM_ID
             );
-            tx2.add(transferHookIx);
+            tx2.add(hookIx);
 
-            let { blockhash } = await connection.getLatestBlockhash();
-            tx2.recentBlockhash = blockhash;
+            let { blockhash: blockhash2 } = await connection.getLatestBlockhash();
+            tx2.recentBlockhash = blockhash2;
             tx2.feePayer = anchorWallet.publicKey;
 
             const signedTx2 = await anchorWallet.signTransaction(tx2);
-            const sig2 = await connection.sendRawTransaction(signedTx2.serialize());
-            console.log("Transfer Hook Tx Sig:", sig2);
+            const transferSig = await connection.sendRawTransaction(signedTx2.serialize());
+
+            console.log("Transfer Hook Tx Sig:", transferSig);
 
         } catch (err) {
-            console.error("Error initializing shareholder by company:", err);
+            console.error("Error initializing shareholder:", err);
         }
-    }, [
-        anchorWallet,
-        companyAccount,
-        mint,
-        treasury,
-        shareholder,
-        shareholderVotingPower,
-        shareholderDestinationTokenAccount,
-        ensureOnChainState
-    ]);
+    }, [anchorWallet, ensureOnChainState, shareholder, shareholderVotingPower]);
 
     /* ------------------------------- Rendering -------------------------------- */
     return (
@@ -1134,21 +1167,17 @@ const Company: FC = () => {
     );
 };
 
-/* -------------------------------------------------------------------------- */
-/*                             Shareholders Page                              */
-/* -------------------------------------------------------------------------- */
+// /* -------------------------------------------------------------------------- */
+// /*                             Shareholders Page                              */
+// /* -------------------------------------------------------------------------- */
 
 const Shareholders: FC = () => {
     const wallet = useAnchorWallet();
     const { publicKey, sendTransaction } = useWallet();
 
-    // Input states for delegating
     const [delegatedTo, setDelegatedTo] = useState('');
     const [votingPower, setVotingPower] = useState('');
 
-
-    // We might want to call the same `ensureOnChainState()` or something to get companyPda
-    // so let's do a quick snippet:
     const anchorWallet = useMemo(() => {
         if (!wallet?.publicKey || !wallet?.signTransaction || !wallet.signAllTransactions) return null;
         return {
@@ -1220,40 +1249,18 @@ const Shareholders: FC = () => {
             }
 
             // 2) Fetch the entire whitelist array to see if "delegatedTo" is in there
-            const fetchedWhitelisted = await transferHookProgram.account.whiteList.all();
+            const fetchedWhitelisted = await transferHookProgram.account.shareholderWhitelist.all();
             let shareholderDestinationTokenAccount: PublicKey | null = null;
-            for (let i = 0; i < fetchedWhitelisted.length; i++) {
-                const entries = fetchedWhitelisted[i].account.whiteList;
-                for (let j = 0; j < entries.length; j++) {
-                    const entry = entries[j];
-                    console.log("Wallet:", entry.walletAccount.toBase58());
-                    console.log("Token:", entry.tokenAccount.toBase58());
-                    if (entry.walletAccount.toBase58() === delegatedTo) {
-                        shareholderDestinationTokenAccount = entry.tokenAccount;
-                        console.log("Shareholder is whitelisted");
-                    }
+            let shareholderDestinationWallet: PublicKey | null = null;
+            for (const entry of fetchedWhitelisted) {
+                if (entry.account.wallet.toBase58() === delegatedTo) {
+                    shareholderDestinationTokenAccount = entry.account.tokenAccount;
+                    shareholderDestinationWallet = entry.account.wallet;
+                    break;
                 }
             }
             if (!shareholderDestinationTokenAccount) {
                 alert("Shareholder is not whitelisted");
-                return;
-            }
-
-            // If you want to ensure the "delegatedTo" is itself whitelisted, you can do a second pass:
-            let isDelegatedWalletWhitelisted = false;
-            for (let i = 0; i < fetchedWhitelisted.length; i++) {
-                const entries = fetchedWhitelisted[i].account.whiteList;
-                for (let j = 0; j < entries.length; j++) {
-                    const entry = entries[j];
-                    if (entry.walletAccount.toBase58() === delegatedTo) {
-                        isDelegatedWalletWhitelisted = true;
-                        break;
-                    }
-                }
-                if (isDelegatedWalletWhitelisted) break;
-            }
-            if (!isDelegatedWalletWhitelisted) {
-                alert("Delegated wallet is NOT whitelisted!");
                 return;
             }
 
@@ -1271,11 +1278,9 @@ const Shareholders: FC = () => {
             // 6) Create & send delegateVoteRights instruction
             const tx = new Transaction();
             const delegateVoteRightsIx = await tokenProgram.methods
-                .delegateVoteRights(new PublicKey(delegatedTo), votingPowerBn, companyPda)
+                .delegateVoteRights(new PublicKey(delegatedTo), new BN(votingPower), companyPda)
                 .accounts({
-                    company: companyPda,
-                    shareholder: newShareholderKeypair.publicKey,
-                    payer: anchorWallet.publicKey,
+                    shareholder: matchingShareholder.publicKey,
                 })
                 .instruction();
             tx.add(delegateVoteRightsIx);
@@ -1285,7 +1290,7 @@ const Shareholders: FC = () => {
             tx.feePayer = anchorWallet.publicKey;
 
             const sigDelegateVoteRights = await sendTransaction(tx, connection, {
-                signers: [newShareholderKeypair],
+                signers: [],
             });
             console.log("Delegate vote rights success, tx sig:", sigDelegateVoteRights);
             alert("Delegated voting rights successfully!");
@@ -1329,13 +1334,11 @@ const Shareholders: FC = () => {
             alert("Failed to delegate voting rights.");
         }
     }, [anchorWallet, delegatedTo, votingPower]);
-
     return (
         <div className="page">
-            <h1>Shareholders Page</h1>
-            <h2> Before delegating voting rights, make sure the shareholder is whitelisted by the company's permenant delegate!</h2>
-            <div className='card'>
-                <h2 className='card-title'>Delegate Voting Rights</h2>
+            <h1>Shareholders</h1>
+            <div className="card">
+                <h2 className="card-title">Delegate Voting Rights</h2>
                 <input
                     type="text"
                     placeholder="New Delegated Wallet"
@@ -1359,9 +1362,9 @@ const Shareholders: FC = () => {
     );
 };
 
-/* -------------------------------------------------------------------------- */
-/*                              CompanyInfo Page                              */
-/* -------------------------------------------------------------------------- */
+// /* -------------------------------------------------------------------------- */
+// /*                              CompanyInfo Page                              */
+// /* -------------------------------------------------------------------------- */
 const CompanyInfo: FC = () => {
     const anchorWallet = useAnchorWallet();
 
@@ -1420,7 +1423,7 @@ const CompanyInfo: FC = () => {
 
         // 3) Fetch all Whitelisted
         try {
-            const fetchedWhitelisted = await transferHookProgram.account.whiteList.all();
+            const fetchedWhitelisted = await transferHookProgram.account.shareholderWhitelist.all();
             console.log("Fetched Whitelisted Accounts:", fetchedWhitelisted);
             setWhitelistedAccounts(fetchedWhitelisted);
         } catch (err) {
@@ -1461,7 +1464,6 @@ const CompanyInfo: FC = () => {
                 )}
             </div>
 
-            {/* ===== Display the Shareholders ===== */}
             <div className="card">
                 <h2>Shareholders</h2>
                 {shareholders.length > 0 ? (
@@ -1469,11 +1471,10 @@ const CompanyInfo: FC = () => {
                         {shareholders.map((sh, index) => (
                             <li key={index}>
                                 <p>
-                                    <strong>Shareholder Account Address:</strong> {sh.publicKey.toBase58()} <br />
-                                    <strong>Shareholder Wallet Address:</strong> {sh.account.owner.toBase58()} <br />
+                                    <strong>Shareholder PDA:</strong> {sh.publicKey.toBase58()} <br />
+                                    <strong>Owner (Wallet):</strong> {sh.account.owner.toBase58()} <br />
                                     <strong>Voting Power:</strong> {sh.account.votingPower.toString()} <br />
                                     <strong>Company:</strong> {sh.account.company.toBase58()}
-
                                 </p>
                             </li>
                         ))}
@@ -1483,26 +1484,20 @@ const CompanyInfo: FC = () => {
                 )}
             </div>
 
-            {/* ===== Display Whitelisted Accounts ===== */}
             <div className="card">
-                <h2>Whitelisted Addresses</h2>
+                <h2>Whitelisted Accounts</h2>
                 {whitelistedAccounts.length > 0 ? (
                     <ul>
                         {whitelistedAccounts.map((wl, index) => (
                             <li key={index}>
                                 <p>
-                                    <strong>Whitelist Account Address:</strong> {wl.publicKey.toBase58()} <br />
-                                    <strong>Whitelist:</strong>{' '}
-                                    {wl.account.whiteList.map((entry: any, idx: number) => {
-                                        return (
-                                            <div key={idx}>
-                                                <p>[<strong>Token Account: </strong>{entry.tokenAccount.toBase58()},</p>
-                                                <p><strong>Wallet Account: </strong>{entry.walletAccount.toBase58()}]</p>
-                                            </div>
-                                        );
-                                    })}
-
+                                    <strong>Whitelist Entry PDA:</strong> {wl.publicKey.toBase58()}
                                 </p>
+                                <div>
+                                    <p>Authority: {wl.account.authority.toBase58()}</p>
+                                    <p>Token Account: {wl.account.tokenAccount.toBase58()}</p>
+                                    <p>Wallet Account: {wl.account.wallet.toBase58()}</p>
+                                </div>
                             </li>
                         ))}
                     </ul>

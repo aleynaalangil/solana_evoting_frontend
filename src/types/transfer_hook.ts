@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/transfer_hook.json`.
  */
 export type TransferHook = {
-  "address": "9DDVM9Un2wnhE3rjh11XV4LHraw422oK8NymjGpSPAxP",
+  "address": "FTYJzS4zX9puYkmGE23zgtSkghLcjHeF6dYVoUabxpPk",
   "metadata": {
     "name": "transferHook",
     "version": "0.1.0",
@@ -14,23 +14,20 @@ export type TransferHook = {
   },
   "instructions": [
     {
-      "name": "addToWhitelist",
+      "name": "addShareholder",
       "discriminator": [
-        157,
-        211,
-        52,
-        54,
-        144,
-        81,
-        5,
-        55
+        245,
+        200,
+        91,
+        102,
+        184,
+        107,
+        29,
+        188
       ],
       "accounts": [
         {
-          "name": "newAccount"
-        },
-        {
-          "name": "whiteList",
+          "name": "newShareholderWhitelist",
           "writable": true,
           "pda": {
             "seeds": [
@@ -42,25 +39,36 @@ export type TransferHook = {
                   105,
                   116,
                   101,
-                  95,
                   108,
                   105,
                   115,
                   116
                 ]
+              },
+              {
+                "kind": "arg",
+                "path": "wallet"
               }
             ]
           }
         },
         {
-          "name": "signer",
+          "name": "authority",
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
         {
-          "name": "walletAccount",
+          "name": "wallet",
+          "type": "pubkey"
+        },
+        {
+          "name": "tokenAccount",
           "type": "pubkey"
         }
       ]
@@ -125,70 +133,37 @@ export type TransferHook = {
         {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "whiteList",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  119,
-                  104,
-                  105,
-                  116,
-                  101,
-                  95,
-                  108,
-                  105,
-                  115,
-                  116
-                ]
-              }
-            ]
-          }
         }
       ],
       "args": []
     },
     {
-      "name": "removeFromWhitelist",
+      "name": "removeShareholder",
       "discriminator": [
-        7,
-        144,
-        216,
-        239,
-        243,
-        236,
+        66,
+        175,
+        86,
+        173,
+        126,
         193,
-        235
+        86,
+        239
       ],
       "accounts": [
         {
-          "name": "accountToRemove",
-          "docs": [
-            "The token account you want to remove",
-            "(and we might also need the wallet key as an arg too)",
-            "/// CHECK: account_to_remove is a token account"
-          ]
-        },
-        {
-          "name": "whiteList",
+          "name": "shareholderWhitelist",
           "writable": true
         },
         {
-          "name": "signer",
+          "name": "authority",
           "writable": true,
-          "signer": true
+          "signer": true,
+          "relations": [
+            "shareholderWhitelist"
+          ]
         }
       ],
-      "args": [
-        {
-          "name": "walletAccount",
-          "type": "pubkey"
-        }
-      ]
+      "args": []
     },
     {
       "name": "transferHook",
@@ -249,28 +224,6 @@ export type TransferHook = {
               }
             ]
           }
-        },
-        {
-          "name": "whiteList",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  119,
-                  104,
-                  105,
-                  116,
-                  101,
-                  95,
-                  108,
-                  105,
-                  115,
-                  116
-                ]
-              }
-            ]
-          }
         }
       ],
       "args": [
@@ -283,16 +236,16 @@ export type TransferHook = {
   ],
   "accounts": [
     {
-      "name": "whiteList",
+      "name": "shareholderWhitelist",
       "discriminator": [
-        77,
-        38,
-        70,
+        57,
         33,
-        93,
-        150,
-        136,
-        174
+        117,
+        211,
+        219,
+        212,
+        200,
+        153
       ]
     }
   ],
@@ -300,22 +253,12 @@ export type TransferHook = {
     {
       "code": 6000,
       "name": "isNotCurrentlyTransferring",
-      "msg": "The token is not currently transferring"
-    },
-    {
-      "code": 6001,
-      "name": "notWhitelistAuthority",
-      "msg": "Only the whitelist authority can modify the whitelist"
-    },
-    {
-      "code": 6002,
-      "name": "walletAlreadyWhitelisted",
-      "msg": "This (token_account, wallet_account) pair is already whitelisted"
+      "msg": "Not currently transferring"
     }
   ],
   "types": [
     {
-      "name": "whiteList",
+      "name": "shareholderWhitelist",
       "type": {
         "kind": "struct",
         "fields": [
@@ -324,30 +267,16 @@ export type TransferHook = {
             "type": "pubkey"
           },
           {
-            "name": "whiteList",
-            "type": {
-              "vec": {
-                "defined": {
-                  "name": "whitelistEntry"
-                }
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "whitelistEntry",
-      "type": {
-        "kind": "struct",
-        "fields": [
+            "name": "wallet",
+            "type": "pubkey"
+          },
           {
             "name": "tokenAccount",
             "type": "pubkey"
           },
           {
-            "name": "walletAccount",
-            "type": "pubkey"
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }

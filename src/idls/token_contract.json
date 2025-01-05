@@ -1,5 +1,5 @@
 {
-  "address": "HYLDMLJVRik77Z3Lcyx4zTehwwJhhpogSVQvGDrhXUBN",
+  "address": "2dae2BYY9kVVDfW4bjprmmrZv6b4PJvudeh4hSJATtS4",
   "metadata": {
     "name": "token_contract",
     "version": "0.1.0",
@@ -9,6 +9,9 @@
   "instructions": [
     {
       "name": "add_shareholder_by_company",
+      "docs": [
+        "Add a new Shareholder by creating a \"Shareholder\" account (one-PDA-per-shareholder)."
+      ],
       "discriminator": [
         61,
         197,
@@ -27,7 +30,30 @@
         {
           "name": "shareholder",
           "writable": true,
-          "signer": true
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  104,
+                  97,
+                  114,
+                  101,
+                  104,
+                  111,
+                  108,
+                  100,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "shareholder_pk"
+              }
+            ]
+          }
         },
         {
           "name": "payer",
@@ -52,6 +78,10 @@
     },
     {
       "name": "delegate_vote_rights",
+      "docs": [
+        "Delegate vote rights by changing the `owner` on the Shareholder account",
+        "(and maybe adjusting voting_power)."
+      ],
       "discriminator": [
         112,
         73,
@@ -65,12 +95,14 @@
       "accounts": [
         {
           "name": "company",
-          "writable": true
+          "writable": true,
+          "relations": [
+            "shareholder"
+          ]
         },
         {
           "name": "shareholder",
-          "writable": true,
-          "signer": true
+          "writable": true
         },
         {
           "name": "payer",
@@ -99,6 +131,10 @@
     },
     {
       "name": "finish_poll",
+      "docs": [
+        "Finish the poll. If there's a tie among multiple top options, create a new poll",
+        "containing only those tied options."
+      ],
       "discriminator": [
         78,
         50,
@@ -111,14 +147,31 @@
       ],
       "accounts": [
         {
-          "name": "poll",
+          "name": "old_poll",
           "writable": true
+        },
+        {
+          "name": "tie_break_poll",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
     },
     {
       "name": "initialize_company",
+      "docs": [
+        "Initialize the Company with name, symbol, total supply, etc."
+      ],
       "discriminator": [
         75,
         156,
@@ -192,6 +245,9 @@
     },
     {
       "name": "initialize_poll",
+      "docs": [
+        "Create a poll with a list of `options`."
+      ],
       "discriminator": [
         193,
         22,
@@ -209,7 +265,7 @@
           "signer": true
         },
         {
-          "name": "owner",
+          "name": "payer",
           "writable": true,
           "signer": true
         },
@@ -228,16 +284,19 @@
       ]
     },
     {
-      "name": "remove_shareholder",
+      "name": "remove_shareholder_by_company",
+      "docs": [
+        "Remove a Shareholder by closing the Shareholder account."
+      ],
       "discriminator": [
-        66,
-        175,
-        86,
-        173,
-        126,
-        193,
-        86,
-        239
+        202,
+        149,
+        2,
+        25,
+        200,
+        153,
+        128,
+        91
       ],
       "accounts": [
         {
@@ -263,27 +322,11 @@
       "args": []
     },
     {
-      "name": "tally_votes",
-      "discriminator": [
-        144,
-        82,
-        0,
-        72,
-        160,
-        132,
-        35,
-        121
-      ],
-      "accounts": [
-        {
-          "name": "poll",
-          "writable": true
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "vote",
+      "docs": [
+        "Cast a vote.",
+        "- Each user that votes must create a unique `VoteRecord` to prove they haven't voted yet."
+      ],
       "discriminator": [
         227,
         110,
@@ -300,15 +343,45 @@
           "writable": true
         },
         {
-          "name": "shareholder",
-          "writable": true
+          "name": "voter",
+          "writable": true,
+          "signer": true
         },
         {
-          "name": "owner",
-          "signer": true,
-          "relations": [
-            "shareholder"
-          ]
+          "name": "vote_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  45,
+                  114,
+                  101,
+                  99,
+                  111,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "poll"
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -317,12 +390,8 @@
           "type": "u8"
         },
         {
-          "name": "shareholder_owner",
-          "type": "pubkey"
-        },
-        {
-          "name": "shareholder_voting_power",
-          "type": "u128"
+          "name": "voting_power",
+          "type": "u64"
         }
       ]
     }
@@ -366,18 +435,36 @@
         195,
         3
       ]
+    },
+    {
+      "name": "VoteRecord",
+      "discriminator": [
+        112,
+        9,
+        123,
+        165,
+        234,
+        9,
+        157,
+        167
+      ]
     }
   ],
   "errors": [
     {
       "code": 6000,
-      "name": "Unauthorized",
-      "msg": "You are not the company authority"
+      "name": "PollAlreadyFinished",
+      "msg": "Poll is already finished"
     },
     {
       "code": 6001,
-      "name": "Underflow",
-      "msg": "Shareholder count underflow"
+      "name": "PollOptionNotFound",
+      "msg": "Poll option not found"
+    },
+    {
+      "code": 6002,
+      "name": "Overflow",
+      "msg": "Arithmetic overflow"
     }
   ],
   "types": [
@@ -407,10 +494,6 @@
             "type": "pubkey"
           },
           {
-            "name": "shareholder_count",
-            "type": "u32"
-          },
-          {
             "name": "treasury",
             "type": "pubkey"
           }
@@ -433,12 +516,6 @@
             }
           },
           {
-            "name": "voters",
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
             "name": "finished",
             "type": "bool"
           }
@@ -451,12 +528,12 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "label",
-            "type": "string"
-          },
-          {
             "name": "id",
             "type": "u8"
+          },
+          {
+            "name": "label",
+            "type": "string"
           },
           {
             "name": "votes",
@@ -481,6 +558,30 @@
           {
             "name": "company",
             "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VoteRecord",
+      "docs": [
+        "Each user must create a VoteRecord with seeds = [b\"vote-record\", pollPubkey, userPubkey]",
+        "to ensure they do not vote twice."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "poll",
+            "type": "pubkey"
+          },
+          {
+            "name": "voter",
+            "type": "pubkey"
+          },
+          {
+            "name": "voted_option",
+            "type": "u8"
           }
         ]
       }
