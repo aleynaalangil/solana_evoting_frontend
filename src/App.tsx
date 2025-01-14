@@ -751,18 +751,18 @@ const Company: FC = () => {
                 return;
             }
 
-            if (!matchedTokenAccount || !matchedWhiteListPda) {
-                alert("Shareholder is not in the whitelist array. Aborting.");
-                return;
-            }
+            // if (!matchedTokenAccount || !matchedWhiteListPda) {
+            //     alert("Shareholder is not in the whitelist array. Aborting.");
+            //     return;
+            // }
             const allShareholders = await tokenProgram.account.shareholder.all();
             const foundShareholderAcc = allShareholders.find(
                 (acc) => acc.account.owner.toBase58() === shareholder.toBase58()
             );
-            if (!foundShareholderAcc) {
-                alert("Shareholder account not found in token_contract. Possibly already removed?");
-                return;
-            }
+            // if (!foundShareholderAcc) {
+            //     alert("Shareholder account not found in token_contract. Possibly already removed?");
+            //     return;
+            // }
 
             //get this from the whitelist
             const shareholderAtaAccount = await transferHookProgram.account.shareholderWhitelist.fetch(matchedWhiteListPda);
