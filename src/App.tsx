@@ -1444,23 +1444,25 @@ const CompanyInfo: FC = () => {
                 <h2>Polls</h2>
                 {polls.length > 0 ? (
                     <ul>
-                        {polls.map((p, index) => (
-                            <li key={index}>
-                                <p>
-                                    <strong>Poll Account Address:</strong> {p.publicKey.toBase58()} <br />
-                                    <strong>Options:</strong>{' '}
-                                    {p.account.options
-                                        .map(
-                                            (option: any) =>
-                                                `${option.label} (${option.votes} votes)`
-                                        )
-                                        .join(', ')}
-                                    <br />
-                                    <strong>Finished?:</strong>{' '}
-                                    {p.account.finished ? 'Yes' : 'No'}
-                                </p>
-                            </li>
-                        ))}
+                        {polls
+                            .filter(p => p.account.options.length > 0) // Filter out polls with zero options
+                            .map((p, index) => (
+                                <li key={index}>
+                                    <p>
+                                        <strong>Poll Account Address:</strong> {p.publicKey.toBase58()} <br />
+                                        <strong>Options:</strong>{' '}
+                                        {p.account.options
+                                            .map(
+                                                (option: any) =>
+                                                    `${option.label} (${option.votes} votes)`
+                                            )
+                                            .join(', ')}
+                                        <br />
+                                        <strong>Finished?:</strong>{' '}
+                                        {p.account.finished ? 'Yes' : 'No'}
+                                    </p>
+                                </li>
+                            ))}
                     </ul>
                 ) : (
                     <p>No polls found.</p>
